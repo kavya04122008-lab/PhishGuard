@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhishGuard // Threat Intelligence Command Center – PS-02</title>
+  
+  <!-- Google Fonts: Futuristic Sans & Monospace -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="cyber-theme">
+  <!-- Subtle Matrix/Scanline Background Grid Overlay -->
+  <div class="cyber-grid-overlay" aria-hidden="true"></div>
+  <div class="cyber-scanline" aria-hidden="true"></div>
+  <div class="cyber-ambient-glow glow-top-left" aria-hidden="true"></div>
+  <div class="cyber-ambient-glow glow-bottom-right" aria-hidden="true"></div>
+
+  <!-- Sleek Floating Navbar -->
+  <header class="navbar-wrapper">
+    <nav class="navbar glass-card">
+      <div class="nav-brand">
+        <!-- Futuristic Shield Icon -->
+        <div class="brand-shield">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M12 8v4" stroke="#00f0ff" stroke-width="2"/>
+            <path d="M12 16h.01" stroke="#00f0ff" stroke-width="2"/>
+          </svg>
+          <span class="shield-pulse"></span>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">PHISH<span class="brand-highlight">GUARD</span></span>
+          <span class="brand-sub">PS-02 SOC // v2.4</span>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <ul class="nav-links">
+        <li><a href="#command-center" class="nav-link active"><span class="nav-dot"></span>COMMAND CENTER</a></li>
+        <li><a href="#analysis-workspace" class="nav-link"><span class="nav-dot"></span>ANALYZE</a></li>
+        <li><a href="#threat-indicators" class="nav-link"><span class="nav-dot"></span>INCIDENTS</a></li>
+        <li><a href="#incident-reports" class="nav-link"><span class="nav-dot"></span>REPORTS</a></li>
+      </ul>
+
+      <!-- Navbar Right: Live Status Indicator & Settings -->
+      <div class="nav-actions">
+        <div class="status-badge live-pulse-badge" title="Telemetry Feed Active">
+          <span class="pulse-indicator"></span>
+          <span class="status-label">SYSTEM ONLINE</span>
+        </div>
+        <button id="settingsBtn" class="icon-btn" title="SOC Interface Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="main-container" id="command-center">
+    <!-- CINEMATIC HERO SECTION -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-tag">
+          <span class="tag-accent">//</span>
+          <span>THREAT INTELLIGENCE // PS-02</span>
+          <span class="tag-live-dot"></span>
+        </div>
+        <h1 class="hero-heading">
+          Investigate <span class="gradient-text">Before You Trust.</span>
+        </h1>
+        <p class="hero-subtitle">
+          Analyze suspicious emails, domains and URLs with evidence-based threat scoring.
+          Precision heuristic forensics built for digital first-responders.
+        </p>
+
+        <div class="hero-cta-group">
+          <a href="#analysis-workspace" class="cyber-btn primary-btn glow-effect" id="heroAnalyzeBtn">
+            <span class="btn-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </span>
+            <span class="btn-label">ANALYZE THREAT</span>
+          </a>
+          <a href="#incident-reports" class="cyber-btn secondary-btn" id="heroIncidentsBtn">
+            <span class="btn-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+            </span>
+            <span class="btn-label">VIEW INCIDENTS</span>
+          </a>
+        </div>
+
+        <!-- Quick Telemetry Metadata -->
+        <div class="hero-meta">
+          <div class="meta-item">
+            <span class="meta-label">SURFACE:</span>
+            <span class="meta-value">EMAIL // WEB // DNS</span>
+          </div>
+          <div class="meta-divider">|</div>
+          <div class="meta-item">
+            <span class="meta-label">LATENCY:</span>
+            <span class="meta-value text-cyan">&lt; 140ms</span>
+          </div>
+          <div class="meta-divider">|</div>
+          <div class="meta-item">
+            <span class="meta-label">CLASSIFICATION:</span>
+            <span class="meta-value text-orange">CRITICAL DEFENSE</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Animated Cybersecurity Visual (Pure CSS/SVG Radar & Shield) -->
+      <div class="hero-visual-container" aria-label="Futuristic Radar Visualization">
+        <div class="cyber-radar-wrapper">
+          <!-- Concentric Radar Rings -->
+          <div class="radar-ring ring-outer"></div>
+          <div class="radar-ring ring-mid"></div>
+          <div class="radar-ring ring-inner"></div>
+          
+          <!-- Crosshairs and Graticules -->
+          <div class="radar-crosshair crosshair-x"></div>
+          <div class="radar-crosshair crosshair-y"></div>
+          <div class="radar-diagonal diag-1"></div>
+          <div class="radar-diagonal diag-2"></div>
+
+          <!-- Rotating Radar Sweep Beam -->
+          <div class="radar-sweep-beam"></div>
+
+          <!-- Pinging Threat Nodes -->
+          <div class="radar-node node-1" title="Target Node #01: Security Radar Telemetry">
+            <span class="node-blip danger"></span>
+            <span class="node-tag" id="radarNodeTag1">STANDBY</span>
+          </div>
+          <div class="radar-node node-2" title="Target Node #02: Spoofed Sender">
+            <span class="node-blip warning"></span>
+            <span class="node-tag">SPOOFED</span>
+          </div>
+          <div class="radar-node node-3" title="Target Node #03: Typosquatting Match">
+            <span class="node-blip danger"></span>
+            <span class="node-tag">TYPO: PAYPA1</span>
+          </div>
+
+          <!-- Central Shield Core -->
+          <div class="radar-center-core">
+            <div class="core-hex">
+              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#00f0ff" stroke-width="1.8">
+                <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/>
+                <path d="M12 11a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
+                <path d="M7 17a5 5 0 0 1 10 0"/>
+              </svg>
+            </div>
+            <div class="core-pulse-rings"></div>
+          </div>
+
+          <!-- Telemetry HUD Overlay -->
+          <div class="hud-stat hud-top-left">RADAR // PS-02 ACTIVE</div>
+          <div class="hud-stat hud-top-right" id="radarHudThreat">THREAT: --/100</div>
+          <div class="hud-stat hud-bottom-left">SCAN FREQ: 2.4 GHz</div>
+          <div class="hud-stat hud-bottom-right">LOC: CLOUD-EDGE</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVE SECURITY STATUS STRIP -->
+    <section class="security-status-strip glass-card" aria-label="Live Security Status Indicators">
+      <div class="status-strip-item">
+        <span class="status-led green"></span>
+        <span class="status-title">SYSTEM STATUS</span>
+        <span class="status-state text-green">● OPERATIONAL</span>
+      </div>
+      <div class="status-strip-item">
+        <span class="status-led cyan"></span>
+        <span class="status-title">THREAT ENGINE</span>
+        <span class="status-state text-cyan">READY</span>
+      </div>
+      <div class="status-strip-item">
+        <span class="status-led cyan"></span>
+        <span class="status-title">EMAIL ANALYZER</span>
+        <span class="status-state text-cyan">READY</span>
+      </div>
+      <div class="status-strip-item">
+        <span class="status-led cyan"></span>
+        <span class="status-title">URL ANALYZER</span>
+        <span class="status-state text-cyan">READY</span>
+      </div>
+      <div class="status-strip-item">
+        <span class="status-led purple"></span>
+        <span class="status-title">INCIDENT MONITOR</span>
+        <span class="status-state text-purple">ACTIVE</span>
+      </div>
+    </section>
+
+    <!-- DASHBOARD STATISTICS SECTION -->
+    <section class="dashboard-stats-grid" aria-label="Threat Telemetry Statistics">
+      <div class="stat-card glass-card">
+        <div class="stat-icon-wrap cyan">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-counter" data-target="128">128</span>
+          <span class="stat-label">EMAILS ANALYZED</span>
+        </div>
+        <div class="stat-trend text-cyan">+12% TODAY</div>
+      </div>
+
+      <div class="stat-card glass-card">
+        <div class="stat-icon-wrap orange">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-counter" data-target="37">37</span>
+          <span class="stat-label">THREATS DETECTED</span>
+        </div>
+        <div class="stat-trend text-orange">28.9% POSITIVE</div>
+      </div>
+
+      <div class="stat-card glass-card danger-accent">
+        <div class="stat-icon-wrap red">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-counter" data-target="12">12</span>
+          <span class="stat-label">CRITICAL THREATS</span>
+        </div>
+        <div class="stat-trend text-red">IMMEDIATE ACTION</div>
+      </div>
+
+      <div class="stat-card glass-card">
+        <div class="stat-icon-wrap purple">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-counter" data-target="15">15</span>
+          <span class="stat-label">REPORTS GENERATED</span>
+        </div>
+        <div class="stat-trend text-purple">SEC-OPS VERIFIED</div>
+      </div>
+    </section>
+
+    <!-- MAIN ANALYSIS AREA (INVESTIGATION WORKSPACE) -->
+    <section class="analysis-workspace-section" id="analysis-workspace">
+      <div class="section-header">
+        <div class="header-left">
+          <span class="section-tag">// FORENSIC INPUT &amp; TELEMETRY</span>
+          <h2 class="section-title">THREAT INVESTIGATION WORKSPACE</h2>
+        </div>
+        <div class="header-actions">
+          <button id="resetSampleBtn" class="cyber-btn-sm" title="Reload Default Demonstration Sample">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            <span>RELOAD SAMPLE</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Investigation Split Workspace -->
+      <div class="workspace-grid">
+        <!-- LEFT SIDE: EMAIL FORENSICS FORM -->
+        <div class="workspace-left glass-card forensic-card">
+          <div class="card-header">
+            <div class="header-title-group">
+              <div class="panel-icon cyan">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="panel-title">EMAIL FORENSICS</h3>
+                <span class="panel-caption">Artifact extraction &amp; heuristic ingestion</span>
+              </div>
+            </div>
+            <span class="badge-tag">WORKSPACE PS-02</span>
+          </div>
+
+          <form id="threatAnalysisForm" class="forensic-form" onsubmit="return false;">
+            <!-- SENDER ADDRESS -->
+            <div class="form-group">
+              <label for="senderInput" class="form-label">
+                <span>SENDER ADDRESS</span>
+                <span class="field-tech">[RFC 5322 From:]</span>
+              </label>
+              <div class="input-cyber-wrapper">
+                <span class="input-icon">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </span>
+                <input 
+                  type="email" 
+                  id="senderInput" 
+                  class="cyber-input font-mono" 
+                  value="security@paypa1-login.com" 
+                  placeholder="e.g. alert@service-update.com"
+                  required
+                >
+                <span class="input-alert-badge" title="Suspicious domain format">TYPO?</span>
+              </div>
+            </div>
+
+            <!-- SUBJECT -->
+            <div class="form-group">
+              <label for="subjectInput" class="form-label">
+                <span>SUBJECT</span>
+                <span class="field-tech">[Header Subject]</span>
+              </label>
+              <div class="input-cyber-wrapper">
+                <span class="input-icon">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="4" y1="9" x2="20" y2="9"/>
+                    <line x1="4" y1="15" x2="20" y2="15"/>
+                    <line x1="10" y1="3" x2="8" y2="21"/>
+                    <line x1="16" y1="3" x2="14" y2="21"/>
+                  </svg>
+                </span>
+                <input 
+                  type="text" 
+                  id="subjectInput" 
+                  class="cyber-input" 
+                  value="Your account will be suspended!" 
+                  placeholder="Subject line..."
+                  required
+                >
+              </div>
+            </div>
+
+            <!-- SUSPICIOUS URL -->
+            <div class="form-group">
+              <label for="urlInput" class="form-label">
+                <span>SUSPICIOUS URL</span>
+                <span class="field-tech">[Hyperlink target]</span>
+              </label>
+              <div class="input-cyber-wrapper">
+                <span class="input-icon">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                  </svg>
+                </span>
+                <input 
+                  type="url" 
+                  id="urlInput" 
+                  class="cyber-input font-mono" 
+                  value="http://paypa1-login.com/verify" 
+                  placeholder="http://suspicious-domain.com/path"
+                  required
+                >
+                <span class="input-alert-badge danger" title="Unencrypted HTTP protocol">HTTP INSECURE</span>
+              </div>
+            </div>
+
+            <!-- EMAIL CONTENT -->
+            <div class="form-group">
+              <label for="emailBodyInput" class="form-label">
+                <span>EMAIL CONTENT</span>
+                <span class="field-tech">[Body Payload]</span>
+              </label>
+              <textarea 
+                id="emailBodyInput" 
+                class="cyber-textarea" 
+                rows="4" 
+                placeholder="Paste raw email body here..."
+              >Your account requires immediate verification. Please verify your account to avoid suspension.</textarea>
+            </div>
+
+            <!-- ATTACHMENT DROP AREA -->
+            <div class="form-group">
+              <label class="form-label">
+                <span>ATTACHMENT</span>
+                <span class="field-tech">[Forensic File Analysis]</span>
+              </label>
+              <div class="drag-drop-zone" id="dropZone">
+                <input type="file" id="fileAttachment" class="file-input-hidden" aria-label="Upload attachment for analysis">
+                <div class="drop-content">
+                  <div class="drop-icon">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                  </div>
+                  <div class="drop-texts">
+                    <span class="drop-main">DROP FILE FOR ANALYSIS</span>
+                    <span class="drop-sub">or <button type="button" class="link-btn" id="browseFileBtn">Browse attachment</button> (.eml, .msg, .pdf, .html)</span>
+                  </div>
+                </div>
+                <div id="fileSelectedDisplay" class="file-selected-badge hidden">
+                  <span class="file-icon">📎</span>
+                  <span id="fileName" class="font-mono">invoice_urgent.pdf</span>
+                  <button type="button" id="removeFileBtn" class="remove-btn" title="Remove file">✕</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- LARGE FUTURISTIC ACTION BUTTON -->
+            <button type="button" id="initiateScanBtn" class="cyber-btn primary-btn btn-large glow-effect">
+              <span class="btn-radar-dot"></span>
+              <span class="btn-label">◉ INITIATE THREAT ANALYSIS</span>
+              <span class="btn-shortcut">SEC-OPS // RUN</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- RIGHT SIDE: SCANNING CONSOLE & DYNAMIC VERDICT DISPLAY -->
+        <div class="workspace-right">
+          <!-- SCANNING ANIMATION SEQUENCE (Appears when scan is running) -->
+          <div id="scanningSequenceCard" class="glass-card scanning-card hidden">
+            <div class="scan-header">
+              <div class="scan-title-group">
+                <div class="spinner-radar"></div>
+                <div>
+                  <h3 class="scan-title">SECURITY SCAN IN PROGRESS</h3>
+                  <span class="scan-sub">PhishGuard Heuristic Pipeline v2.4</span>
+                </div>
+              </div>
+              <span id="scanPercent" class="font-mono text-cyan">0%</span>
+            </div>
+
+            <!-- Glowing Progress Bar -->
+            <div class="cyber-progress-track">
+              <div id="scanProgressBar" class="cyber-progress-fill" style="width: 0%;"></div>
+            </div>
+
+            <!-- Step-by-Step Sequence Console -->
+            <div class="scan-steps-list" id="scanStepsList">
+              <div class="scan-step" data-step="1">
+                <span class="step-status">⏳</span>
+                <span class="step-text">INITIALIZING ANALYSIS...</span>
+              </div>
+              <div class="scan-step" data-step="2">
+                <span class="step-status">⏳</span>
+                <span class="step-text">CHECKING SENDER...</span>
+              </div>
+              <div class="scan-step" data-step="3">
+                <span class="step-status">⏳</span>
+                <span class="step-text">ANALYZING DOMAIN...</span>
+              </div>
+              <div class="scan-step" data-step="4">
+                <span class="step-status">⏳</span>
+                <span class="step-text">INSPECTING URL...</span>
+              </div>
+              <div class="scan-step" data-step="5">
+                <span class="step-status">⏳</span>
+                <span class="step-text">SCANNING LANGUAGE...</span>
+              </div>
+              <div class="scan-step" data-step="6">
+                <span class="step-status">⏳</span>
+                <span class="step-text">CALCULATING THREAT SCORE...</span>
+              </div>
+              <div class="scan-step" data-step="7">
+                <span class="step-status">⏳</span>
+                <span class="step-text">ANALYSIS COMPLETE</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- THREAT VERDICT PANEL -->
+          <div id="threatVerdictPanel" class="glass-card verdict-panel danger-border">
+            <div class="verdict-banner">
+              <span class="threat-flag-icon">⚠️</span>
+              <span id="threatFlagText" class="threat-flag-text">SECURITY ALERT // THREAT DETECTED</span>
+              <span id="threatConfidence" class="threat-confidence">CONFIDENCE: 98.4%</span>
+            </div>
+
+            <div class="verdict-main-display">
+              <!-- Animated Circular Risk Meter -->
+              <div class="circular-meter-container">
+                <svg class="circular-meter-svg" viewBox="0 0 160 160">
+                  <!-- Background Track -->
+                  <circle class="meter-track" cx="80" cy="80" r="68" />
+                  <!-- Glowing Danger Arc -->
+                  <circle id="meterProgressCircle" class="meter-fill danger-glow" cx="80" cy="80" r="68" stroke-dasharray="427.26" stroke-dashoffset="34.18" />
+                </svg>
+                <div class="meter-inner-content">
+                  <div class="meter-score-row">
+                    <span id="threatScoreNumber" class="meter-number font-mono">--</span>
+                    <span class="meter-max font-mono">/ 100</span>
+                  </div>
+                  <span class="meter-caption">THREAT INDEX</span>
+                </div>
+              </div>
+
+              <!-- Verdict Text & Critical Badge -->
+              <div class="verdict-details">
+                <div class="verdict-pill-row">
+                  <span id="verdictBadge" class="risk-badge-critical">AWAITING SCAN</span>
+                  <span id="verdictSeverity" class="severity-id font-mono">SEV: PENDING</span>
+                </div>
+                <h3 id="verdictHeadline" class="verdict-headline">STANDBY</h3>
+                <p id="verdictExplanation" class="verdict-explanation">
+                  Click 'Initiate Threat Analysis' to evaluate heuristic threat vectors with live FastAPI intelligence.
+                </p>
+                <div class="verdict-meta-strip">
+                  <span class="meta-tag">ENGINE: FASTAPI-HEURISTIC</span>
+                  <span class="meta-tag">FINGERPRINT: DYNAMIC-INSPECT</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- RISK BREAKDOWN (4 Analysis Cards) -->
+            <div class="risk-breakdown-grid">
+              <!-- SENDER RISK -->
+              <div class="breakdown-card">
+                <div class="breakdown-top">
+                  <div class="breakdown-icon-wrap cyan">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                  </div>
+                  <span class="breakdown-name">SENDER RISK</span>
+                  <span class="breakdown-score font-mono text-cyan" id="breakdownScoreSender">--%</span>
+                </div>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar-fill cyan" id="breakdownBarSender" style="width: 0%;"></div>
+                </div>
+                <span class="breakdown-desc" id="breakdownDescSender">Awaiting forensic scan of message sender.</span>
+              </div>
+
+              <!-- DOMAIN RISK -->
+              <div class="breakdown-card">
+                <div class="breakdown-top">
+                  <div class="breakdown-icon-wrap cyan">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="2" y1="12" x2="22" y2="12"/>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                  </div>
+                  <span class="breakdown-name">DOMAIN RISK</span>
+                  <span class="breakdown-score font-mono text-cyan" id="breakdownScoreDomain">--%</span>
+                </div>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar-fill cyan" id="breakdownBarDomain" style="width: 0%;"></div>
+                </div>
+                <span class="breakdown-desc" id="breakdownDescDomain">Awaiting domain registration and heuristic analysis.</span>
+              </div>
+
+              <!-- URL RISK -->
+              <div class="breakdown-card">
+                <div class="breakdown-top">
+                  <div class="breakdown-icon-wrap cyan">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                  </div>
+                  <span class="breakdown-name">URL RISK</span>
+                  <span class="breakdown-score font-mono text-cyan" id="breakdownScoreUrl">--%</span>
+                </div>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar-fill cyan" id="breakdownBarUrl" style="width: 0%;"></div>
+                </div>
+                <span class="breakdown-desc" id="breakdownDescUrl">Awaiting hyperlink destination inspection.</span>
+              </div>
+
+              <!-- LANGUAGE RISK -->
+              <div class="breakdown-card">
+                <div class="breakdown-top">
+                  <div class="breakdown-icon-wrap cyan">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                  </div>
+                  <span class="breakdown-name">LANGUAGE RISK</span>
+                  <span class="breakdown-score font-mono text-cyan" id="breakdownScoreLang">--%</span>
+                </div>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar-fill cyan" id="breakdownBarLang" style="width: 0%;"></div>
+                </div>
+                <span class="breakdown-desc" id="breakdownDescLang">Awaiting natural language urgency analysis.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THREAT INDICATORS SECTION (05 DETECTED) -->
+    <section class="threat-indicators-section" id="threat-indicators">
+      <div class="section-header">
+        <div class="header-left">
+          <span class="section-tag">// FORENSIC EVIDENCE CORRELATION</span>
+          <h2 id="threatIndicatorsTitle" class="section-title">THREAT INDICATORS // AWAITING RUN</h2>
+        </div>
+        <div class="indicator-stat-chip">
+          <span class="chip-pulse"></span>
+          <span id="threatIndicatorsChip">READY FOR SCAN</span>
+        </div>
+      </div>
+
+      <div id="threatIndicatorsGrid" class="indicators-grid">
+        <!-- INDICATOR 1: SUSPICIOUS SENDER -->
+        <div class="indicator-card glass-card">
+          <div class="indicator-head">
+            <div class="indicator-icon danger">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <div class="indicator-meta">
+              <span class="severity-tag critical">CRITICAL</span>
+              <h4 class="indicator-title">SUSPICIOUS SENDER</h4>
+            </div>
+          </div>
+          <div class="indicator-evidence">
+            <span class="evidence-tag">EVIDENCE</span>
+            <code class="evidence-code font-mono">security@paypa1-login.com</code>
+          </div>
+          <p class="indicator-desc">
+            Sender domain does not match official institution authoritative mail exchanges. DKIM and SPF checks indicate spoofing probability.
+          </p>
+        </div>
+
+        <!-- INDICATOR 2: LOOKALIKE DOMAIN -->
+        <div class="indicator-card glass-card">
+          <div class="indicator-head">
+            <div class="indicator-icon danger">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <div class="indicator-meta">
+              <span class="severity-tag critical">CRITICAL</span>
+              <h4 class="indicator-title">LOOKALIKE DOMAIN</h4>
+            </div>
+          </div>
+          <div class="indicator-evidence">
+            <span class="evidence-tag">EVIDENCE</span>
+            <code class="evidence-code font-mono">paypa1-login.com resembles paypal.com</code>
+          </div>
+          <p class="indicator-desc">
+            Algorithmic Levenshtein distance detects active homoglyph attack substituting letter "l" with digit "1" to mislead users.
+          </p>
+        </div>
+
+        <!-- INDICATOR 3: SUSPICIOUS URL -->
+        <div class="indicator-card glass-card">
+          <div class="indicator-head">
+            <div class="indicator-icon danger">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+            </div>
+            <div class="indicator-meta">
+              <span class="severity-tag critical">CRITICAL</span>
+              <h4 class="indicator-title">SUSPICIOUS URL</h4>
+            </div>
+          </div>
+          <div class="indicator-evidence">
+            <span class="evidence-tag">EVIDENCE</span>
+            <code class="evidence-code font-mono">http://paypa1-login.com/verify</code>
+          </div>
+          <p class="indicator-desc">
+            Clear-text HTTP protocol used for purported authentication. Landing page mimics genuine financial login portal to hijack credentials.
+          </p>
+        </div>
+
+        <!-- INDICATOR 4: URGENCY LANGUAGE -->
+        <div class="indicator-card glass-card">
+          <div class="indicator-head">
+            <div class="indicator-icon warning">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+            </div>
+            <div class="indicator-meta">
+              <span class="severity-tag high">HIGH</span>
+              <h4 class="indicator-title">URGENCY LANGUAGE</h4>
+            </div>
+          </div>
+          <div class="indicator-evidence">
+            <span class="evidence-tag">EVIDENCE</span>
+            <code class="evidence-code font-mono">"account will be suspended"</code>
+          </div>
+          <p class="indicator-desc">
+            Natural language heuristics detect coercive psychological trigger designed to cause panic and bypass rational risk assessment.
+          </p>
+        </div>
+
+        <!-- INDICATOR 5: SUSPICIOUS KEYWORDS -->
+        <div class="indicator-card glass-card">
+          <div class="indicator-head">
+            <div class="indicator-icon warning">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+              </svg>
+            </div>
+            <div class="indicator-meta">
+              <span class="severity-tag medium">MEDIUM</span>
+              <h4 class="indicator-title">SUSPICIOUS KEYWORDS</h4>
+            </div>
+          </div>
+          <div class="indicator-evidence">
+            <span class="evidence-tag">EVIDENCE</span>
+            <code class="evidence-code font-mono">"suspended", "verify", "immediate"</code>
+          </div>
+          <p class="indicator-desc">
+            High frequency of credential-harvesting triggers matching known social engineering patterns in phishing telemetry corpora.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TECHNICAL FORENSICS: DOMAIN INTELLIGENCE & URL FORENSICS -->
+    <section class="deep-forensics-section">
+      <!-- DOMAIN INTELLIGENCE PANEL -->
+      <div class="forensics-panel glass-card">
+        <div class="panel-header-bar">
+          <div class="header-title-group">
+            <span class="dot-indicator red"></span>
+            <h3 class="panel-heading">DOMAIN INTELLIGENCE</h3>
+          </div>
+          <span class="panel-tech-id font-mono">DNS-SIG // TYPO-CHECK</span>
+        </div>
+
+        <div class="domain-intel-content">
+          <!-- Metric Rows -->
+          <div class="intel-metrics-grid">
+            <div class="intel-metric-box">
+              <span class="intel-label">DOMAIN</span>
+              <span id="domainValDomain" class="intel-val font-mono text-white">paypa1-login.com</span>
+            </div>
+            <div class="intel-metric-box">
+              <span class="intel-label">BRAND SIMILARITY</span>
+              <span id="domainValSimilarity" class="intel-val font-mono text-cyan">94%</span>
+            </div>
+            <div class="intel-metric-box">
+              <span class="intel-label">LOOKALIKE DETECTED</span>
+              <span id="domainValLookalike" class="intel-val font-mono text-red">YES</span>
+            </div>
+            <div class="intel-metric-box">
+              <span class="intel-label">PROTOCOL</span>
+              <span id="domainValProtocol" class="intel-val font-mono text-orange">HTTP</span>
+            </div>
+            <div class="intel-metric-box">
+              <span class="intel-label">STATUS</span>
+              <span id="domainValStatus" class="intel-val font-mono text-red">SUSPICIOUS</span>
+            </div>
+          </div>
+
+          <!-- Visual Domain Typosquatting Comparison -->
+          <div class="domain-compare-container">
+            <div class="compare-title">VISUAL HOMOGLYPH COMPARISON</div>
+            <div class="compare-card">
+              <div class="compare-row authentic-row">
+                <span class="compare-badge safe">AUTHENTIC TARGET</span>
+                <span class="compare-domain font-mono">
+                  pay<span class="char-match">p</span><span class="char-match">a</span><span class="char-legit">l</span>.com
+                </span>
+                <span class="status-pill safe">OFFICIAL</span>
+              </div>
+              
+              <div class="compare-arrow">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <polyline points="19 12 12 19 5 12"/>
+                </svg>
+                <span>HOMOGLYPH SPOOF</span>
+              </div>
+
+              <div class="compare-row spoof-row">
+                <span class="compare-badge spoof">MALICIOUS CLONE</span>
+                <span class="compare-domain font-mono">
+                  pay<span class="char-match">p</span><span class="char-match">a</span><span class="char-deceptive" title="Digit '1' substitutes letter 'l'">1</span>-login.com
+                </span>
+                <span class="status-pill danger">DECEPTIVE (1 vs l)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- URL FORENSICS PANEL -->
+      <div class="forensics-panel glass-card">
+        <div class="panel-header-bar">
+          <div class="header-title-group">
+            <span class="dot-indicator cyan"></span>
+            <h3 class="panel-heading">URL FORENSICS</h3>
+          </div>
+          <span class="panel-tech-id font-mono">URI-DECODE // RFC 3986</span>
+        </div>
+
+        <div class="url-forensics-content">
+          <!-- Full URL Display -->
+          <div class="url-full-display">
+            <span class="url-field-label">FULL URL:</span>
+            <div id="urlDisplayBox" class="url-code-box font-mono">
+              <span id="urlDisplaySpan" class="text-orange">http://paypa1-login.com/verify</span>
+              <button class="copy-url-btn" id="copyUrlBtn" title="Copy URL to clipboard">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- URL Breakdown Table -->
+          <div class="forensics-table-wrap">
+            <table class="cyber-table font-mono">
+              <tbody>
+                <tr>
+                  <td class="tbl-key">PROTOCOL</td>
+                  <td id="urlTableProtocol" class="tbl-val text-orange">HTTP <span class="badge-inline warning">INSECURE</span></td>
+                </tr>
+                <tr>
+                  <td class="tbl-key">DOMAIN</td>
+                  <td id="urlTableDomain" class="tbl-val text-red">paypa1-login.com</td>
+                </tr>
+                <tr>
+                  <td class="tbl-key">PATH</td>
+                  <td id="urlTablePath" class="tbl-val text-cyan">/verify</td>
+                </tr>
+                <tr>
+                  <td class="tbl-key">STATUS</td>
+                  <td id="urlTableStatus" class="tbl-val text-red">SUSPICIOUS <span class="badge-inline critical">HIGH THREAT</span></td>
+                </tr>
+                <tr>
+                  <td class="tbl-key">TLS / SSL</td>
+                  <td id="urlTableTls" class="tbl-val text-red">NONE (CLEAR TEXT TRANSMISSION)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EVIDENCE TERMINAL & INDICATORS OF COMPROMISE -->
+    <section class="terminal-ioc-section">
+      <!-- EVIDENCE TERMINAL -->
+      <div class="terminal-window glass-card">
+        <div class="terminal-topbar">
+          <div class="terminal-dots">
+            <span class="term-dot dot-red"></span>
+            <span class="term-dot dot-yellow"></span>
+            <span class="term-dot dot-green"></span>
+          </div>
+          <div class="terminal-title font-mono">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"/>
+              <line x1="12" y1="19" x2="20" y2="19"/>
+            </svg>
+            <span>EVIDENCE TERMINAL // SOC_LOG_FEED.sh</span>
+          </div>
+          <div class="terminal-actions">
+            <button id="copyLogBtn" class="terminal-btn" title="Copy raw logs">COPY</button>
+          </div>
+        </div>
+
+        <div class="terminal-body font-mono" id="terminalLogBody">
+          <div class="term-line"><span class="term-prefix">[SOC-INIT]</span> <span class="term-log">PHISHGUARD SOC COMMAND ACTIVE // LISTENING ON 127.0.0.1:8000</span></div>
+          <div class="term-line"><span class="term-prefix">[TELEMETRY]</span> <span class="term-log">ENGINE STATUS .......... <span class="text-green">ONLINE (FASTAPI V1.0)</span></span></div>
+          <div class="term-line"><span class="term-prefix">[SENSOR]</span> <span class="term-log">HEURISTIC MODELS ....... <span class="text-cyan">HOMOGLYPH, RFC-5322, NLP</span></span></div>
+          <div class="term-line"><span class="term-prefix">[BUFFER]</span> <span class="term-log">STAGED PAYLOAD ......... <span class="text-white">AWAITING USER DISPATCH</span></span></div>
+          <div class="term-line"><span class="term-prefix">[CALC-AG]</span> <span class="term-log">THREAT SCORE ........... <span class="text-cyan font-bold">AWAITING SCAN</span></span></div>
+          <div class="term-line"><span class="term-prefix">[VERDICT]</span> <span class="term-log">FINAL VERDICT .......... <span class="text-cyan font-bold">STANDBY</span></span></div>
+          <div class="term-line term-cursor-line">
+            <span class="term-prompt">phishguard@soc-node:~$</span>
+            <span class="terminal-cursor">_</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- INDICATORS OF COMPROMISE (IoC) -->
+      <div class="ioc-panel glass-card">
+        <div class="ioc-header">
+          <div class="header-title-group">
+            <div class="panel-icon purple">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                <polyline points="2 17 12 22 22 17"/>
+                <polyline points="2 12 12 17 22 12"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="panel-heading">INDICATORS OF COMPROMISE (IoC)</h3>
+              <span class="panel-caption">Extracted forensic threat signatures</span>
+            </div>
+          </div>
+          <button id="copyIocBtn" class="cyber-btn-sm" title="Export IoC parameters">
+            <span>COPY ALL IoC</span>
+          </button>
+        </div>
+
+        <div class="ioc-list">
+          <div class="ioc-item">
+            <div class="ioc-type font-mono">EMAIL</div>
+            <div class="ioc-value font-mono">security@paypa1-login.com</div>
+            <span class="ioc-tag danger">SPOOFED</span>
+          </div>
+
+          <div class="ioc-item">
+            <div class="ioc-type font-mono">DOMAIN</div>
+            <div class="ioc-value font-mono">paypa1-login.com</div>
+            <span class="ioc-tag danger">LOOKALIKE</span>
+          </div>
+
+          <div class="ioc-item">
+            <div class="ioc-type font-mono">URL</div>
+            <div class="ioc-value font-mono">http://paypa1-login.com/verify</div>
+            <span class="ioc-tag danger">HARVESTER</span>
+          </div>
+
+          <div class="ioc-item">
+            <div class="ioc-type font-mono">KEYWORDS</div>
+            <div class="ioc-tags-group">
+              <span class="keyword-pill">suspended</span>
+              <span class="keyword-pill">verify</span>
+              <span class="keyword-pill">immediate</span>
+            </div>
+            <span class="ioc-tag warning">COERCION</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECOMMENDED SECURITY ACTION -->
+    <section class="security-action-section">
+      <div class="action-card glass-card danger-glow-card">
+        <div class="action-card-left">
+          <div class="action-shield-icon">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#ff0055" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <div class="action-text-group">
+            <div class="action-badge">RECOMMENDED SECURITY ACTION</div>
+            <h3 id="actionCardTitle" class="action-title">Security Recommendation</h3>
+            <p id="actionCardMessage" class="action-message">
+              Run threat analysis to generate automated recommended containment procedures.
+            </p>
+          </div>
+        </div>
+
+        <div class="action-card-buttons">
+          <button id="quarantineBtn" class="cyber-btn danger-btn glow-effect">
+            <span class="btn-icon">🛑</span>
+            <span class="btn-label">QUARANTINE EMAIL</span>
+          </button>
+          <button id="reportIncidentBtn" class="cyber-btn secondary-btn">
+            <span class="btn-icon">🛡️</span>
+            <span class="btn-label">REPORT INCIDENT</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- INCIDENT REPORT SECTION -->
+    <section class="incident-report-section" id="incident-reports">
+      <div class="section-header">
+        <div class="header-left">
+          <span class="section-tag">// SEC-OPS INCIDENT DOSSIER</span>
+          <h2 class="section-title">INCIDENT REPORT</h2>
+        </div>
+        <div id="reportBadgeId" class="report-badge-id font-mono">CASE: PG-PS02-0001</div>
+      </div>
+
+      <div class="report-dossier-card glass-card">
+        <!-- Dossier Header -->
+        <div class="dossier-top">
+          <div class="dossier-header-info">
+            <span class="dossier-label">INCIDENT RECORD</span>
+            <h3 id="dossierCaseId" class="dossier-id font-mono">PG-PS02-0001</h3>
+          </div>
+          <div class="dossier-badges">
+            <span id="dossierHeaderBadge" class="risk-badge-critical">SEVERITY PENDING</span>
+            <span id="dossierTimestamp" class="dossier-timestamp font-mono">TIMESTAMP: PENDING RUN</span>
+          </div>
+        </div>
+
+        <!-- Dossier Details Table Grid -->
+        <div class="dossier-grid">
+          <div class="dossier-cell">
+            <span class="cell-label">VERDICT</span>
+            <span id="dossierVerdictVal" class="cell-value text-cyan font-bold font-mono">AWAITING SCAN</span>
+          </div>
+
+          <div class="dossier-cell">
+            <span class="cell-label">RISK SCORE</span>
+            <span id="dossierScoreVal" class="cell-value text-cyan font-bold font-mono">-- / 100</span>
+          </div>
+
+          <div class="dossier-cell">
+            <span class="cell-label">SEVERITY</span>
+            <span id="dossierSeverityVal" class="cell-value text-cyan font-mono">PENDING</span>
+          </div>
+
+          <div class="dossier-cell">
+            <span class="cell-label">DETECTED INDICATORS</span>
+            <span id="dossierIndicatorsVal" class="cell-value text-cyan font-mono">--</span>
+          </div>
+
+          <div class="dossier-cell span-full">
+            <span class="cell-label">EVIDENCE CORRELATION</span>
+            <span id="dossierEvidenceVal" class="cell-value text-white font-mono">
+              Awaiting live analysis execution...
+            </span>
+          </div>
+
+          <div class="dossier-cell span-full">
+            <span class="cell-label">RECOMMENDED ACTION</span>
+            <span id="dossierActionVal" class="cell-value text-orange">
+              Run threat analysis to generate mitigation protocol.
+            </span>
+          </div>
+        </div>
+
+        <!-- Dossier Buttons -->
+        <div class="dossier-actions">
+          <button id="generateReportBtn" class="cyber-btn primary-btn glow-effect">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+            <span>GENERATE REPORT</span>
+          </button>
+
+          <button id="downloadReportBtn" class="cyber-btn secondary-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>DOWNLOAD REPORT</span>
+          </button>
+
+          <button id="shareIncidentBtn" class="cyber-btn secondary-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="18" cy="5" r="3"/>
+              <circle cx="6" cy="12" r="3"/>
+              <circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            <span>SHARE INCIDENT</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Sleek SOC Footer -->
+  <footer class="cyber-footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <span class="brand-name">PHISH<span class="brand-highlight">GUARD</span></span>
+        <span class="footer-copy">Phishing Attack Investigation Platform // PS-02</span>
+      </div>
+      <div class="footer-telemetry font-mono">
+        <span>GRID: ONLINE</span>
+        <span class="foot-divider">|</span>
+        <span>GATEWAY: PROTECTED</span>
+        <span class="foot-divider">|</span>
+        <span>LATENCY: 12ms</span>
+      </div>
+      <div class="footer-links">
+        <a href="#command-center" class="foot-link">BACK TO TOP ↑</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification System Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Settings Modal (Demo Frontend Dialog) -->
+  <div id="settingsModal" class="modal-backdrop hidden">
+    <div class="modal-card glass-card">
+      <div class="modal-header">
+        <h3 class="modal-title">SOC INTERFACE CONFIGURATION</h3>
+        <button id="closeSettingsModal" class="modal-close-btn" aria-label="Close modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-row">
+          <span>High-Contrast Threat Shading</span>
+          <input type="checkbox" id="highContrastToggle" checked>
+        </div>
+        <div class="setting-row">
+          <span>Scanline CRT Simulation</span>
+          <input type="checkbox" id="scanlineToggle" checked>
+        </div>
+        <div class="setting-row">
+          <span>Live Radar Sweep Animation</span>
+          <input type="checkbox" id="radarAnimationToggle" checked>
+        </div>
+        <div class="setting-row">
+          <span>Heuristic Sensitivity Threshold</span>
+          <span class="font-mono text-cyan">AGGRESSIVE (90%)</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveSettingsBtn" class="cyber-btn primary-btn btn-sm">APPLY CONFIGURATION</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script -->
+  <script src="script.js"></script>
+</body>
+</html>
