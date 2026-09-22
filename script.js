@@ -327,7 +327,8 @@ async function handleInvestigationSubmit(e) {
     if (submitBtn) submitBtn.disabled = false;
 
     if (errorAlert && errorMessage) {
-      errorMessage.textContent = `Backend Analysis Error: ${err.message}. Verify that the PhishGuard API is reachable at https://phishguard-1-m1se.onrender.com;
+      //errorMessage.textContent = `Backend Analysis Error: ${err.message}. Verify that the PhishGuard API is reachable at https://phishguard-1-m1se.onrender.com;
+      errorMessage.textContent = `Backend Analysis Error: ${err.message}. Verify that the PhishGuard API is reachable at https://phishguard-1-m1se.onrender.com`;
       errorAlert.classList.remove('hidden');
     }
     showToast(`Analysis failed: ${err.message}`, 'error');
