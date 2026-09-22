@@ -1,1124 +1,985 @@
 /**
- * PHISHGUARD // CYBER THREAT INVESTIGATION PLATFORM – PS-02
- * Frontend Interactive Command Center Controller
- * Connected to FastAPI Backend (POST http://127.0.0.1:8001/api/analyze)
- * Vanilla JavaScript (Strictly Framework-Free)
+ * PhishGuard — Phishing Attack Investigation Platform (PS-02)
+ * Production Frontend Application Bundle
+ * 
+ * Strict Invariants:
+ * 1. ZERO hardcoded mock scores in templates.
+ * 2. ZERO fake component risk percentages (sender %, domain %, etc.).
+ * 3. Domain Analysis is FULLY dynamic (no hardcoded PayPal or domains).
+ * 4. Dedicated SPA hash routing with distinct sub-pages and back navigation (no accordions).
+ * 5. Real API integration: POST http://127.0.0.1:8000/api/analyze
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-  'use strict';
+'use strict';
 
-  // --- DOM ELEMENT REFERENCES ---
-  const initiateScanBtn = document.getElementById('initiateScanBtn');
-  const resetSampleBtn = document.getElementById('resetSampleBtn');
-  const scanningSequenceCard = document.getElementById('scanningSequenceCard');
-  const threatVerdictPanel = document.getElementById('threatVerdictPanel');
-  const scanProgressBar = document.getElementById('scanProgressBar');
-  const scanPercent = document.getElementById('scanPercent');
-  const scanSteps = document.querySelectorAll('.scan-step');
+// ============================================================================
+// CONSTANTS & CONFIGURATION
+// ============================================================================
+const API_BASE = 'http://127.0.0.1:8000';
+const STORAGE_KEY = 'phishguard_analysis_v2';
+const AUTH_KEY = 'phishguard_analyst_session';
+
+const ROUTES = {
+  '#/login': 'view-login',
+  '#/dashboard': 'view-dashboard',
+  '#/investigate': 'view-investigate',
+  '#/results': 'view-results',
+  '#/results/threat-analysis': 'view-detail-threat',
+  '#/results/domain': 'view-detail-domain',
+  '#/results/url': 'view-detail-url',
+  '#/results/evidence': 'view-detail-evidence',
+  '#/results/indicators': 'view-detail-indicators',
+  '#/results/recommended-action': 'view-detail-action',
+  '#/report': 'view-report'
+};
+
+// Global in-memory active investigation state
+let currentAnalysis = null;
+
+// ============================================================================
+// HELPER UTILITIES
+// ============================================================================
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `cyber-toast ${type}`;
   
-  // Meter & Verdict DOM Elements
-  const meterProgressCircle = document.getElementById('meterProgressCircle');
-  const threatScoreNumber = document.getElementById('threatScoreNumber');
-  const threatFlagText = document.getElementById('threatFlagText');
-  const threatConfidence = document.getElementById('threatConfidence');
-  const verdictBadge = document.getElementById('verdictBadge');
-  const verdictSeverity = document.getElementById('verdictSeverity');
-  const verdictHeadline = document.getElementById('verdictHeadline');
-  const verdictExplanation = document.getElementById('verdictExplanation');
-  const statCounters = document.querySelectorAll('.stat-counter');
-  const radarNodeTag1 = document.getElementById('radarNodeTag1');
-  const radarHudThreat = document.getElementById('radarHudThreat');
-  
-  // Indicators Section DOM Elements
-  const threatIndicatorsTitle = document.getElementById('threatIndicatorsTitle');
-  const threatIndicatorsChip = document.getElementById('threatIndicatorsChip');
-  const threatIndicatorsGrid = document.getElementById('threatIndicatorsGrid');
+  let icon = 'ℹ';
+  if (type === 'success') icon = '✔';
+  if (type === 'error') icon = '✖';
+  if (type === 'warning') icon = '⚠';
 
-  // Domain Intelligence DOM Elements
-  const domainValDomain = document.getElementById('domainValDomain');
-  const domainValSimilarity = document.getElementById('domainValSimilarity');
-  const domainValLookalike = document.getElementById('domainValLookalike');
-  const domainValProtocol = document.getElementById('domainValProtocol');
-  const domainValStatus = document.getElementById('domainValStatus');
+  toast.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <span class="toast-text">${escapeHtml(message)}</span>
+  `;
 
-  // URL Forensics DOM Elements
-  const urlDisplayBox = document.getElementById('urlDisplayBox');
-  const urlTableProtocol = document.getElementById('urlTableProtocol');
-  const urlTableDomain = document.getElementById('urlTableDomain');
-  const urlTablePath = document.getElementById('urlTablePath');
-  const urlTableStatus = document.getElementById('urlTableStatus');
-  const urlTableTls = document.getElementById('urlTableTls');
+  container.appendChild(toast);
 
-  // Recommended Action & Dossier DOM Elements
-  const actionCardTitle = document.getElementById('actionCardTitle');
-  const actionCardMessage = document.getElementById('actionCardMessage');
-  const dossierCaseId = document.getElementById('dossierCaseId');
-  const reportBadgeId = document.getElementById('reportBadgeId');
-  const dossierHeaderBadge = document.getElementById('dossierHeaderBadge');
-  const dossierTimestamp = document.getElementById('dossierTimestamp');
-  const dossierVerdictVal = document.getElementById('dossierVerdictVal');
-  const dossierScoreVal = document.getElementById('dossierScoreVal');
-  const dossierSeverityVal = document.getElementById('dossierSeverityVal');
-  const dossierIndicatorsVal = document.getElementById('dossierIndicatorsVal');
-  const dossierEvidenceVal = document.getElementById('dossierEvidenceVal');
-  const dossierActionVal = document.getElementById('dossierActionVal');
-  const terminalLogBody = document.getElementById('terminalLogBody');
-  const iocListContainer = document.querySelector('.ioc-list');
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 300);
+  }, 4000);
+}
 
-  // Form Inputs
+function copyToClipboard(text, successMsg = 'Copied to clipboard!') {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(successMsg, 'success');
+    }).catch(() => {
+      fallbackCopy(text, successMsg);
+    });
+  } else {
+    fallbackCopy(text, successMsg);
+  }
+}
+
+function fallbackCopy(text, successMsg) {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-9999px';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  try {
+    document.execCommand('copy');
+    showToast(successMsg, 'success');
+  } catch (err) {
+    showToast('Failed to copy to clipboard', 'error');
+  }
+  document.body.removeChild(textArea);
+}
+
+function extractDomain(url) {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname;
+  } catch (e) {
+    return url.replace(/^https?:\/\//i, '').split('/')[0].split('?')[0];
+  }
+}
+
+// ============================================================================
+// ROUTING ENGINE (SPA HASH ROUTER)
+// ============================================================================
+function navigateTo(hash) {
+  window.location.hash = hash;
+}
+
+function handleRouteChange() {
+  let hash = window.location.hash || '#/dashboard';
+
+  // Normalize empty or root
+  if (hash === '#' || hash === '' || hash === '#/') {
+    hash = '#/dashboard';
+  }
+
+  // Check route validity
+  const targetViewId = ROUTES[hash];
+  if (!targetViewId) {
+    console.warn(`Unknown route: ${hash}, redirecting to dashboard.`);
+    navigateTo('#/dashboard');
+    return;
+  }
+
+  // Guard results and report routes: must have active analysis data
+  const isResultsOrReport = hash.startsWith('#/results') || hash === '#/report';
+  if (isResultsOrReport) {
+    if (!currentAnalysis) {
+      // Try restoring from sessionStorage
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          currentAnalysis = JSON.parse(saved);
+          renderAllViews(currentAnalysis);
+        } catch (e) {
+          sessionStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    }
+
+    if (!currentAnalysis) {
+      showToast('No active investigation data found. Please run an analysis first.', 'warning');
+      navigateTo('#/investigate');
+      return;
+    }
+  }
+
+  // Toggle View Containers
+  document.querySelectorAll('.spa-view').forEach(view => {
+    if (view.id === targetViewId) {
+      view.classList.remove('hidden');
+    } else {
+      view.classList.add('hidden');
+    }
+  });
+
+  // Scroll to top of window on view transition
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Update Navbar Active State
+  updateNavbarState(hash);
+}
+
+function updateNavbarState(hash) {
+  const dashLink = document.getElementById('navLinkDashboard');
+  const invLink = document.getElementById('navLinkInvestigate');
+  const resLink = document.getElementById('navLinkResults');
+  const repLink = document.getElementById('navLinkReport');
+
+  [dashLink, invLink, resLink, repLink].forEach(link => {
+    if (link) link.classList.remove('active');
+  });
+
+  if (hash === '#/dashboard' && dashLink) dashLink.classList.add('active');
+  if (hash === '#/investigate' && invLink) invLink.classList.add('active');
+  if (hash.startsWith('#/results') && resLink) resLink.classList.add('active');
+  if (hash === '#/report' && repLink) repLink.classList.add('active');
+
+  // Show or hide Results & Report navbar tabs based on active investigation
+  const hasData = Boolean(currentAnalysis);
+  if (resLink) resLink.classList.toggle('hidden', !hasData);
+  if (repLink) repLink.classList.toggle('hidden', !hasData);
+}
+
+// ============================================================================
+// BACKEND CONNECTIVITY MONITOR
+// ============================================================================
+async function checkBackendHealth() {
+  const statusPulse = document.getElementById('statusPulseDot');
+  const statusText = document.getElementById('statusText');
+  const dashStatus = document.getElementById('dashBackendStatus');
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(`${API_BASE}/api/health`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      if (statusPulse) statusPulse.className = 'status-pulse-dot online';
+      if (statusText) {
+        statusText.textContent = 'API: ONLINE (FASTAPI)';
+        statusText.classList.remove('text-red');
+        statusText.classList.add('text-green');
+      }
+      if (dashStatus) {
+        dashStatus.textContent = 'http://127.0.0.1:8000 (Active)';
+        dashStatus.className = 'metric-val text-green font-mono';
+      }
+      return true;
+    }
+  } catch (err) {
+    // API offline or unreachable
+  }
+
+  if (statusPulse) statusPulse.className = 'status-pulse-dot offline';
+  if (statusText) {
+    statusText.textContent = 'API: OFFLINE (PORT 8000)';
+    statusText.classList.remove('text-green');
+    statusText.classList.add('text-red');
+  }
+  if (dashStatus) {
+    dashStatus.textContent = 'http://127.0.0.1:8000 (Offline — Start FastAPI)';
+    dashStatus.className = 'metric-val text-red font-mono';
+  }
+  return false;
+}
+
+// ============================================================================
+// THREAT ANALYSIS DISPATCHER
+// ============================================================================
+async function handleInvestigationSubmit(e) {
+  e.preventDefault();
+
   const senderInput = document.getElementById('senderInput');
   const subjectInput = document.getElementById('subjectInput');
   const urlInput = document.getElementById('urlInput');
-  const emailBodyInput = document.getElementById('emailBodyInput');
-  
-  // File Upload
-  const dropZone = document.getElementById('dropZone');
-  const fileAttachment = document.getElementById('fileAttachment');
-  const browseFileBtn = document.getElementById('browseFileBtn');
-  const fileSelectedDisplay = document.getElementById('fileSelectedDisplay');
-  const fileNameDisplay = document.getElementById('fileName');
-  const removeFileBtn = document.getElementById('removeFileBtn');
+  const bodyInput = document.getElementById('emailBodyInput');
+  const errorAlert = document.getElementById('formErrorAlert');
+  const errorMessage = document.getElementById('formErrorMessage');
+  const submitBtn = document.getElementById('analyzeSubmitBtn');
+  const overlay = document.getElementById('loadingOverlay');
 
-  // Action Buttons
-  const quarantineBtn = document.getElementById('quarantineBtn');
-  const reportIncidentBtn = document.getElementById('reportIncidentBtn');
-  const generateReportBtn = document.getElementById('generateReportBtn');
-  const downloadReportBtn = document.getElementById('downloadReportBtn');
-  const shareIncidentBtn = document.getElementById('shareIncidentBtn');
-  const copyIocBtn = document.getElementById('copyIocBtn');
-  const copyUrlBtn = document.getElementById('copyUrlBtn');
-  const copyLogBtn = document.getElementById('copyLogBtn');
-  const heroAnalyzeBtn = document.getElementById('heroAnalyzeBtn');
-  const heroIncidentsBtn = document.getElementById('heroIncidentsBtn');
+  const sender = (senderInput?.value || '').trim();
+  const subject = (subjectInput?.value || '').trim();
+  const url = (urlInput?.value || '').trim();
+  const body = (bodyInput?.value || '').trim();
 
-  // Settings Modal Elements
-  const settingsBtn = document.getElementById('settingsBtn');
-  const settingsModal = document.getElementById('settingsModal');
-  const closeSettingsModal = document.getElementById('closeSettingsModal');
-  const saveSettingsBtn = document.getElementById('saveSettingsBtn');
-  const scanlineToggle = document.getElementById('scanlineToggle');
-  const radarAnimationToggle = document.getElementById('radarAnimationToggle');
-  const cyberScanline = document.querySelector('.cyber-scanline');
-  const radarSweepBeam = document.querySelector('.radar-sweep-beam');
-
-  // --- SAMPLE DATA DEFINITION ---
-  const DEFAULT_SAMPLE = {
-    sender: 'security@paypa1-login.com',
-    subject: 'Your account will be suspended!',
-    url: 'http://paypa1-login.com/verify',
-    body: 'Verify your account immediately.'
-  };
-
-  // State to hold latest backend analysis result
-  let latestAnalysisResult = null;
-  let currentCaseId = 'PG-PS02-0001';
-  let isScanning = false;
-
-  // --- 1. TOAST NOTIFICATION SYSTEM ---
-  function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `cyber-toast ${type === 'danger' ? 'danger' : ''}`;
-    
-    const icon = type === 'danger' ? '🛑' : (type === 'success' ? '🛡️' : '⚡');
-    toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
-    
-    container.appendChild(toast);
-
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(10px)';
-      toast.style.transition = 'all 0.3s ease';
-      setTimeout(() => toast.remove(), 300);
-    }, 4000);
+  // Validation: At least one field required
+  if (!sender && !subject && !url && !body) {
+    if (errorAlert && errorMessage) {
+      errorMessage.textContent = 'Please enter at least one field (sender email, subject, URL, or body) for heuristic analysis.';
+      errorAlert.classList.remove('hidden');
+    }
+    showToast('Please provide at least one input field to analyze.', 'error');
+    return;
   }
 
-  // --- 2. NUMBER COUNTER ANIMATION ---
-  function animateValue(element, start, end, duration) {
-    if (!element) return;
-    let startTimestamp = null;
-    const step = (timestamp) => {
-      if (!startTimestamp) startTimestamp = timestamp;
-      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      const currentVal = Math.floor(progress * (end - start) + start);
-      element.textContent = currentVal;
-      if (progress < 1) {
-        window.requestAnimationFrame(step);
-      } else {
-        element.textContent = end;
-      }
-    };
-    window.requestAnimationFrame(step);
-  }
+  if (errorAlert) errorAlert.classList.add('hidden');
+  if (submitBtn) submitBtn.disabled = true;
+  if (overlay) overlay.classList.remove('hidden');
 
-  // Initialize Dashboard Metric Counters
-  function initStatCounters() {
-    statCounters.forEach(counter => {
-      const target = parseInt(counter.getAttribute('data-target'), 10) || 0;
-      animateValue(counter, 0, target, 1600);
+  // Trigger telemetry visual steps
+  animateLoadingSteps();
+
+  try {
+    const payload = { sender, subject, body, url };
+    const res = await fetch(`${API_BASE}/api/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
-  }
 
-  // --- 3. DYNAMIC CIRCULAR RISK METER ---
-  function updateRiskMeter(score, verdict = '') {
-    if (!meterProgressCircle || !threatScoreNumber) return;
-    
-    // Total circumference for r=68 is ~427.26
-    const circumference = 2 * Math.PI * 68;
-    const offset = circumference - (score / 100) * circumference;
-
-    // Reset dashoffset then animate smoothly
-    meterProgressCircle.style.strokeDashoffset = circumference;
-    setTimeout(() => {
-      meterProgressCircle.style.strokeDashoffset = offset;
-    }, 100);
-
-    // Dynamic color styling based on threat score and verdict
-    let strokeColor = '#00ff88';
-    let dropShadow = '0 0 12px rgba(0, 255, 136, 0.7)';
-    
-    const upperVerdict = String(verdict).toUpperCase();
-    if (score >= 80 || upperVerdict === 'CRITICAL') {
-      strokeColor = '#ff0055'; // Critical Red
-      dropShadow = '0 0 14px rgba(255, 0, 85, 0.8)';
-    } else if (score >= 60 || upperVerdict === 'HIGH') {
-      strokeColor = '#ff7700'; // High Orange
-      dropShadow = '0 0 12px rgba(255, 119, 0, 0.7)';
-    } else if (score >= 30 || upperVerdict === 'MEDIUM') {
-      strokeColor = '#f59e0b'; // Medium Yellow/Amber
-      dropShadow = '0 0 12px rgba(245, 158, 11, 0.7)';
-    } else {
-      strokeColor = '#00ff88'; // Low / Clean Green
-      dropShadow = '0 0 12px rgba(0, 255, 136, 0.7)';
-    }
-
-    meterProgressCircle.style.stroke = strokeColor;
-    meterProgressCircle.style.filter = `drop-shadow(${dropShadow})`;
-    threatScoreNumber.style.textShadow = dropShadow;
-
-    animateValue(threatScoreNumber, 0, score, 1100);
-  }
-
-  // --- 4. ASYNCHRONOUS BACKEND API CLIENT ---
-  async function callBackendApi(payload) {
-    const candidateEndpoints = [];
-    if (window.location.port === '8000') {
-      candidateEndpoints.push('/api/analyze');
-    }
-    candidateEndpoints.push('http://127.0.0.1:8001/api/analyze');
-    candidateEndpoints.push('http://localhost:8000/api/analyze');
-
-    let lastError = null;
-    for (const endpoint of candidateEndpoints) {
+    if (!res.ok) {
+      let detailMsg = `Analysis request failed with HTTP ${res.status}`;
       try {
-        console.log(`[PhishGuard] Dispatching analysis payload to ${endpoint}...`);
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('[PhishGuard] Received live backend response:', data);
-          return data;
-        } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-      } catch (err) {
-        console.warn(`[PhishGuard] Candidate endpoint ${endpoint} failed:`, err);
-        lastError = err;
-      }
+        const errJson = await res.json();
+        if (errJson.detail) detailMsg = errJson.detail;
+      } catch (_) {}
+      throw new Error(detailMsg);
     }
 
-    throw lastError || new Error('Backend API unavailable at all candidate endpoints');
+    const data = await res.json();
+    console.log("BACKEND RISK SCORE:", data.risk_score);
+    console.log("FULL BACKEND DATA:", data);
+
+    // Enrich with operational investigation metadata
+    data.timestamp = new Date().toLocaleString();
+    data.caseId = 'PG-' + Math.floor(100000 + Math.random() * 900000);
+    data.rawInputs = { sender, subject, url, body };
+
+    // Update state and persistence
+    currentAnalysis = data;
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+    // Render all sub-pages with genuine returned backend data
+    renderAllViews(data);
+
+    // Conclude loading transition
+    setTimeout(() => {
+      if (overlay) overlay.classList.add('hidden');
+      if (submitBtn) submitBtn.disabled = false;
+      navigateTo('#/results');
+      showToast(`Analysis completed: ${data.verdict} Risk (Score: ${data.risk_score}/100)`, 'success');
+    }, 850);
+
+  } catch (err) {
+    console.error('API Error:', err);
+    if (overlay) overlay.classList.add('hidden');
+    if (submitBtn) submitBtn.disabled = false;
+
+    if (errorAlert && errorMessage) {
+      errorMessage.textContent = `Backend Analysis Error: ${err.message}. Verify that FastAPI is running on http://127.0.0.1:8000.`;
+      errorAlert.classList.remove('hidden');
+    }
+    showToast(`Analysis failed: ${err.message}`, 'error');
   }
+}
 
-  // --- 5. RUN THREAT ANALYSIS WORKFLOW ---
-  async function runThreatAnalysis() {
-    if (isScanning) return;
+function animateLoadingSteps() {
+  const fill = document.getElementById('loadingBarFill');
+  const s1 = document.getElementById('lStep1');
+  const s2 = document.getElementById('lStep2');
+  const s3 = document.getElementById('lStep3');
 
-    // 1. Read input values from frontend form
-    const sender = (senderInput ? senderInput.value : '').trim();
-    const subject = (subjectInput ? subjectInput.value : '').trim();
-    const url = (urlInput ? urlInput.value : '').trim();
-    const body = (emailBodyInput ? emailBodyInput.value : '').trim();
+  if (fill) fill.style.width = '15%';
+  [s1, s2, s3].forEach(el => el && (el.style.opacity = '0.4'));
 
-    if (!sender && !subject && !url && !body) {
-      showToast('Please enter an email sender, subject, URL, or body to analyze.', 'danger');
-      return;
-    }
+  if (s1) s1.style.opacity = '1';
 
-    isScanning = true;
+  setTimeout(() => {
+    if (fill) fill.style.width = '55%';
+    if (s2) s2.style.opacity = '1';
+  }, 300);
 
-    // Update scan button state
-    if (initiateScanBtn) {
-      initiateScanBtn.disabled = true;
-      initiateScanBtn.style.opacity = '0.75';
-      const label = initiateScanBtn.querySelector('.btn-label');
-      if (label) label.textContent = '◉ DISPATCHING TO THREAT ENGINE...';
-    }
+  setTimeout(() => {
+    if (fill) fill.style.width = '90%';
+    if (s3) s3.style.opacity = '1';
+  }, 600);
+}
 
-    // Show Scanning Console Card
-    if (scanningSequenceCard) {
-      scanningSequenceCard.classList.remove('hidden');
-      scanningSequenceCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+// ============================================================================
+// COMPREHENSIVE VIEW RENDERERS (NO HARDCODING, NO FAKE PERCENTAGES)
+// ============================================================================
+function renderAllViews(data) {
+  if (!data) return;
 
-    // Reset scan steps UI
-    scanSteps.forEach(step => {
-      step.classList.remove('active', 'completed', 'failed');
-      const statusIcon = step.querySelector('.step-status');
-      if (statusIcon) statusIcon.textContent = '⏳';
-    });
+  renderResultsOverview(data);
+  renderThreatAnalysisView(data);
+  renderDomainView(data);
+  renderUrlView(data);
+  renderEvidenceView(data);
+  renderIndicatorsView(data);
+  renderActionView(data);
+  renderReportView(data);
 
-    if (scanProgressBar) scanProgressBar.style.width = '0%';
-    if (scanPercent) scanPercent.textContent = '0%';
+  // Update navigation items visibility
+  const resLink = document.getElementById('navLinkResults');
+  const repLink = document.getElementById('navLinkReport');
+  if (resLink) resLink.classList.remove('hidden');
+  if (repLink) repLink.classList.remove('hidden');
+}
 
-    // Step animation controller: advance steps progressively
-    let currentStepIndex = 0;
-    const totalSteps = scanSteps.length;
-    const stepInterval = 250;
+/**
+ * 1. Result Overview Page (#/results)
+ */
+function renderResultsOverview(data) {
+  const scoreEl = document.getElementById('resultsRiskScore');
+  const badgeEl = document.getElementById('resultsVerdictBadge');
+  const headlineEl = document.getElementById('resultsVerdictHeadline');
+  const summaryEl = document.getElementById('resultsHumanSummary');
+  const meterFill = document.getElementById('resultsMeterFill');
+  const caseIdEl = document.getElementById('resultsCaseId');
 
-    const stepTimer = setInterval(() => {
-      if (currentStepIndex < totalSteps - 1) {
-        if (currentStepIndex > 0) {
-          const prevStep = scanSteps[currentStepIndex - 1];
-          prevStep.classList.remove('active');
-          prevStep.classList.add('completed');
-          const prevIcon = prevStep.querySelector('.step-status');
-          if (prevIcon) prevIcon.textContent = '✔';
-        }
+  const score = typeof data.risk_score === 'number' ? data.risk_score : 0;
+  const verdict = (data.verdict || 'UNKNOWN').toUpperCase();
 
-        const curStep = scanSteps[currentStepIndex];
-        curStep.classList.add('active');
-        const curIcon = curStep.querySelector('.step-status');
-        if (curIcon) curIcon.textContent = '▶';
+  // 1. Score display
+  if (scoreEl) scoreEl.textContent = score;
+  //console.log("RESULT PAGE SCORE:", score);
+  //console.log("RESULT ELEMENT:", scoreEl?.textContent);
+  if (caseIdEl) caseIdEl.textContent = `CASE: ${data.caseId || '--'}`;
 
-        const progress = Math.round(((currentStepIndex + 1) / totalSteps) * 88);
-        if (scanProgressBar) scanProgressBar.style.width = `${progress}%`;
-        if (scanPercent) scanPercent.textContent = `${progress}%`;
+  // 2. Circular meter animation
+  if (meterFill) {
+    const circumference = 427.26; // 2 * PI * 68
+    const offset = circumference - (circumference * Math.min(Math.max(score, 0), 100)) / 100;
+    meterFill.style.strokeDashoffset = offset;
 
-        currentStepIndex++;
-      }
-    }, stepInterval);
-
-    // 2. Dispatch request to backend API
-    try {
-      const payload = {
-        sender: sender,
-        subject: subject,
-        body: body,
-        url: url
-      };
-
-      const result = await callBackendApi(payload);
-      latestAnalysisResult = result;
-
-      // Complete visual scan steps
-      clearInterval(stepTimer);
-
-      scanSteps.forEach(step => {
-        step.classList.remove('active');
-        step.classList.add('completed');
-        const icon = step.querySelector('.step-status');
-        if (icon) icon.textContent = '✔';
-      });
-
-      if (scanProgressBar) scanProgressBar.style.width = '100%';
-      if (scanPercent) scanPercent.textContent = '100%';
-
-      setTimeout(() => {
-        // 3. Update all frontend elements with real backend response
-        updateUIWithBackendResult(result, payload);
-        finalizeScanState();
-        showToast(`Threat analysis complete: Score ${result.risk_score}/100 [${result.verdict}]`, result.risk_score >= 60 ? 'danger' : 'info');
-      }, 350);
-
-    } catch (err) {
-      clearInterval(stepTimer);
-      console.error('[PhishGuard Frontend Error] Backend communication failed:', err);
-
-      if (scanSteps[currentStepIndex]) {
-        scanSteps[currentStepIndex].classList.add('failed');
-        const icon = scanSteps[currentStepIndex].querySelector('.step-status');
-        if (icon) icon.textContent = '✖';
-      }
-
-      showToast('Backend unavailable at http://127.0.0.1:8000. Please ensure FastAPI is running (uvicorn backend.main:app --reload)', 'danger');
-
-      if (terminalLogBody) {
-        const errorLine = document.createElement('div');
-        errorLine.className = 'term-line';
-        errorLine.innerHTML = `<span class="term-prefix text-red">[ERR-FAIL]</span> <span class="term-log text-red font-bold">API CONNECTION REFUSED // http://127.0.0.1:8001/api/analyze</span>`;
-        terminalLogBody.insertBefore(errorLine, terminalLogBody.lastElementChild);
-      }
-
-      finalizeScanState();
+    // Meter color dynamically styled based on score
+    if (score >= 70) {
+      meterFill.style.stroke = '#ff3366';
+    } else if (score >= 40) {
+      meterFill.style.stroke = '#ffaa00';
+    } else {
+      meterFill.style.stroke = '#00ff88';
     }
   }
 
-  function finalizeScanState() {
-    isScanning = false;
-    if (initiateScanBtn) {
-      initiateScanBtn.disabled = false;
-      initiateScanBtn.style.opacity = '1';
-      const label = initiateScanBtn.querySelector('.btn-label');
-      if (label) label.textContent = '◉ INITIATE THREAT ANALYSIS';
+  // 3. Verdict badge & headline
+  if (badgeEl) {
+    badgeEl.textContent = verdict;
+    badgeEl.className = 'verdict-badge';
+    if (verdict === 'HIGH' || score >= 70) {
+      badgeEl.classList.add('badge-high');
+    } else if (verdict === 'MEDIUM' || score >= 40) {
+      badgeEl.classList.add('badge-medium');
+    } else {
+      badgeEl.classList.add('badge-low');
     }
   }
 
-  // --- 6. UPDATE UI WITH REAL BACKEND DATA ---
-  function updateUIWithBackendResult(data, inputs) {
-    if (!data) return;
+  if (headlineEl) {
+    if (score >= 70 || verdict === 'HIGH') {
+      headlineEl.textContent = 'HIGH RISK PHISHING THREAT DETECTED';
+      headlineEl.style.color = '#ff3366';
+    } else if (score >= 40 || verdict === 'MEDIUM') {
+      headlineEl.textContent = 'SUSPICIOUS MESSAGE — PROCEED WITH CAUTION';
+      headlineEl.style.color = '#ffaa00';
+    } else {
+      headlineEl.textContent = 'LOW RISK — NO PROVEN ANOMALIES';
+      headlineEl.style.color = '#00ff88';
+    }
+  }
 
-    currentCaseId = 'PG-PS02-' + Math.floor(1000 + Math.random() * 9000);
+  // 4. "Why is this suspicious?" dynamic human-readable explanation
+  if (summaryEl) {
+    summaryEl.textContent = buildDynamicWhySuspiciousText(data);
+  }
+}
 
-    // A. Reveal Threat Verdict Panel
-    if (threatVerdictPanel) {
-      threatVerdictPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      threatVerdictPanel.classList.add('pulse-verdict');
-      setTimeout(() => threatVerdictPanel.classList.remove('pulse-verdict'), 1200);
+function buildDynamicWhySuspiciousText(data) {
+  const parts = [];
+  const score = data.risk_score || 0;
+  const verdict = data.verdict || 'UNKNOWN';
 
-      threatVerdictPanel.classList.remove('danger-border', 'warning-border', 'safe-border');
-      if (data.risk_score >= 60 || data.verdict === 'CRITICAL' || data.verdict === 'HIGH') {
-        threatVerdictPanel.classList.add('danger-border');
+  parts.push(`This message received an overall threat index of ${score}/100 (${verdict} Risk).`);
+
+  if (data.domain_similarity && data.matched_brand) {
+    parts.push(`Critical Brand Impersonation: The sender domain targets '${data.matched_brand}' via ${data.similarity_reason || 'lookalike domain syntax'}.`);
+  } else if (data.domain_similarity) {
+    parts.push(`Typosquatting Detected: ${data.similarity_reason || 'Deceptive domain syntax detected'}.`);
+  }
+
+  const indicators = data.indicators || [];
+  if (indicators.length > 0) {
+    const indicatorNames = indicators.map(ind => typeof ind === 'string' ? ind : (ind.name || ind.id || 'Trigger')).slice(0, 3);
+    parts.push(`Triggered heuristic indicators include: ${indicatorNames.join(', ')}.`);
+  }
+
+  if (score < 40 && indicators.length === 0 && !data.domain_similarity) {
+    return `This communication scored ${score}/100 (${verdict} Risk). The security engine found no signs of brand impersonation, deceptive homoglyph characters, or high-urgency social engineering patterns.`;
+  }
+
+  return parts.join(' ');
+}
+
+/**
+ * 2. Dedicated Threat Analysis Page (#/results/threat-analysis)
+ * NOTE: User Correction 1 — ZERO fake component percentages!
+ */
+function renderThreatAnalysisView(data) {
+  const summaryText = document.getElementById('threatAnalysisSummaryText');
+  const scoreDisplay = document.getElementById('threatScoreDisplay');
+  const verdictDisplay = document.getElementById('threatVerdictDisplay');
+  const verdictCaption = document.getElementById('threatVerdictCaption');
+  const componentGrid = document.getElementById('componentStatusGrid');
+
+  const score = data.risk_score || 0;
+  const verdict = data.verdict || 'UNKNOWN';
+
+  if (scoreDisplay) scoreDisplay.textContent = score;
+  if (verdictDisplay) {
+    verdictDisplay.textContent = verdict;
+    if (score >= 70) verdictDisplay.className = 'verdict-text text-red';
+    else if (score >= 40) verdictDisplay.className = 'verdict-text text-orange';
+    else verdictDisplay.className = 'verdict-text text-green';
+  }
+
+  if (summaryText) {
+    summaryText.textContent = `The evaluated threat score (${score}/100) was synthesized by the FastAPI heuristic engine based on real pattern violations detected across headers, domains, and text structure.`;
+  }
+
+  if (verdictCaption) {
+    if (score >= 70) {
+      verdictCaption.textContent = 'High confidence malicious phishing attack signature.';
+    } else if (score >= 40) {
+      verdictCaption.textContent = 'Moderate suspicion level. Manual verification advised.';
+    } else {
+      verdictCaption.textContent = 'Standard heuristic thresholds passed. Low threat potential.';
+    }
+  }
+
+  // Component Checklist: strictly boolean/qualitative flags from genuine backend findings
+  if (componentGrid) {
+    const raw = data.rawInputs || {};
+    const indicators = data.indicators || [];
+    const evidence = data.evidence || [];
+
+    // Evaluate each component based on real data
+    const hasDomainSim = Boolean(data.domain_similarity);
+    const hasSenderFlag = Boolean(data.domain_analysis?.has_suspicious_tld) || hasDomainSim || indicators.some(i => (typeof i === 'string' ? i : i.name || '').toLowerCase().includes('sender') || (typeof i === 'string' ? i : i.name || '').toLowerCase().includes('domain'));
+    const hasUrlFlag = Boolean(data.url_analysis?.has_ip) || indicators.some(i => (typeof i === 'string' ? i : i.name || '').toLowerCase().includes('url') || (typeof i === 'string' ? i : i.name || '').toLowerCase().includes('http'));
+    const hasUrgencyFlag = indicators.some(i => (typeof i === 'string' ? i : i.name || '').toLowerCase().includes('urgent') || (typeof i === 'string' ? i : i.name || '').toLowerCase().includes('suspension') || (typeof i === 'string' ? i : i.name || '').toLowerCase().includes('credential'));
+
+    const components = [
+      {
+        title: 'Brand Impersonation & Typosquatting',
+        status: hasDomainSim ? 'FLAGGED' : 'PASSED',
+        isDanger: hasDomainSim,
+        detail: hasDomainSim 
+          ? `Deceptive lookalike detected targeting '${escapeHtml(data.matched_brand || 'monitored brand')}' (${escapeHtml(data.similarity_reason || '')}).`
+          : 'No lookalike signatures or homoglyph character substitutions detected.'
+      },
+      {
+        title: 'Sender Domain & Header Syntax',
+        status: hasSenderFlag ? 'FLAGGED' : 'PASSED',
+        isDanger: hasSenderFlag,
+        detail: hasSenderFlag 
+          ? `Sender domain '${escapeHtml(data.domain_analysis?.sender_domain || raw.sender || 'unknown')}' triggered defensive domain heuristics.`
+          : `Sender domain '${escapeHtml(data.domain_analysis?.sender_domain || raw.sender || 'unknown')}' matches standard DNS/naming conventions.`
+      },
+      {
+        title: 'URL & Destination Security',
+        status: raw.url ? (hasUrlFlag ? 'FLAGGED' : 'PASSED') : 'NOT PROVIDED',
+        isDanger: hasUrlFlag,
+        detail: raw.url
+          ? (hasUrlFlag ? 'Hyperlink uses insecure transfer protocol or suspicious domain routing.' : 'Hyperlink destination has standard structure without immediate flags.')
+          : 'No external URL target was provided in this investigation case.'
+      },
+      {
+        title: 'Urgency & Coercive Language',
+        status: hasUrgencyFlag ? 'FLAGGED' : 'PASSED',
+        isDanger: hasUrgencyFlag,
+        detail: hasUrgencyFlag
+          ? 'Language exhibits artificial panic, immediate suspension threats, or credential demand cues.'
+          : 'No urgent pressure cues or aggressive security intimidation detected.'
       }
+    ];
+
+    componentGrid.innerHTML = components.map(c => `
+      <div class="comp-status-card ${c.isDanger ? 'border-danger' : 'border-safe'}">
+        <div class="comp-head-row">
+          <span class="comp-title-text">${c.title}</span>
+          <span class="comp-badge-pill ${c.isDanger ? 'pill-danger' : (c.status === 'PASSED' ? 'pill-safe' : 'pill-neutral')}">${c.status}</span>
+        </div>
+        <p class="comp-detail-desc">${c.detail}</p>
+      </div>
+    `).join('');
+  }
+}
+
+/**
+ * 3. Dedicated Domain & Brand Forensics Page (#/results/domain)
+ * NOTE: User Correction 2 — FULLY dynamic! No hardcoded PayPal or domains.
+ */
+function renderDomainView(data) {
+  const explanationEl = document.getElementById('domainExplanationText');
+  const badgeEl = document.getElementById('domainOverallBadge');
+  const senderEl = document.getElementById('domainDetailSender');
+  const simFlagEl = document.getElementById('domainDetailSimFlag');
+  const brandEl = document.getElementById('domainDetailBrand');
+  const reasonEl = document.getElementById('domainDetailReason');
+  const comparisonBlock = document.getElementById('domainComparisonBlock');
+
+  const senderDomain = data.domain_analysis?.sender_domain || (data.rawInputs?.sender ? data.rawInputs.sender.split('@')[1] : null) || 'Not provided';
+  const hasSimilarity = Boolean(data.domain_similarity);
+  const matchedBrand = data.matched_brand || null;
+  const similarityReason = data.similarity_reason || (hasSimilarity ? 'Suspicious similarity pattern' : 'No deceptive patterns detected');
+
+  if (senderEl) senderEl.textContent = senderDomain;
+  if (brandEl) brandEl.textContent = matchedBrand || 'None (No brand targeted)';
+  if (reasonEl) reasonEl.textContent = similarityReason;
+
+  if (badgeEl) {
+    if (hasSimilarity) {
+      badgeEl.textContent = 'DECEPTIVE LOOKALIKE';
+      badgeEl.className = 'badge-status badge-danger';
+    } else {
+      badgeEl.textContent = 'AUTHENTIC / UNMATCHED';
+      badgeEl.className = 'badge-status badge-safe';
     }
+  }
 
-    // B. Risk Score Meter Animation (uses data.risk_score)
-    updateRiskMeter(data.risk_score, data.verdict);
-
-    // C. Verdict Banner & Headline
-    if (threatFlagText) {
-      threatFlagText.textContent = `SECURITY ALERT // ${data.verdict} THREAT DETECTED`;
+  if (simFlagEl) {
+    if (hasSimilarity) {
+      simFlagEl.textContent = 'YES — LOOKALIKE DETECTED';
+      simFlagEl.className = 'prop-val font-mono text-red';
+    } else {
+      simFlagEl.textContent = 'NO — NO BRAND MISMATCH';
+      simFlagEl.className = 'prop-val font-mono text-green';
     }
+  }
 
-    if (threatConfidence) {
-      const confidence = (82 + (data.risk_score * 0.16)).toFixed(1);
-      threatConfidence.textContent = `CONFIDENCE: ${confidence}%`;
+  // Dynamic explanation text
+  if (explanationEl) {
+    if (hasSimilarity && matchedBrand) {
+      explanationEl.textContent = `The sender domain '${senderDomain}' was detected mimicking the legitimate brand '${matchedBrand}'. Identified mechanism: ${similarityReason}. Threat actors use this technique to deceive recipients into entering credentials or bypassing routine vigilance.`;
+    } else if (hasSimilarity) {
+      explanationEl.textContent = `The sender domain '${senderDomain}' was flagged for suspicious lookalike syntax: ${similarityReason}.`;
+    } else {
+      explanationEl.textContent = `The sender domain '${senderDomain}' does not match any monitored high-value brand lookalike patterns or deceptive homoglyph substitutions.`;
     }
+  }
 
-    // Verdict Badge
-    if (verdictBadge) {
-      verdictBadge.textContent = `${data.verdict}`;
-      if (data.verdict === 'CRITICAL') {
-        verdictBadge.style.background = 'var(--threat-red)';
-        verdictBadge.style.color = '#ffffff';
-      } else if (data.verdict === 'HIGH') {
-        verdictBadge.style.background = 'var(--threat-orange)';
-        verdictBadge.style.color = '#ffffff';
-      } else if (data.verdict === 'MEDIUM') {
-        verdictBadge.style.background = 'var(--threat-yellow)';
-        verdictBadge.style.color = '#000000';
-      } else {
-        verdictBadge.style.background = 'var(--threat-green)';
-        verdictBadge.style.color = '#000000';
-      }
-    }
-
-    // Severity ID
-    if (verdictSeverity) {
-      verdictSeverity.textContent = `SEV: ${data.verdict === 'CRITICAL' ? '1 (CRITICAL)' : data.verdict === 'HIGH' ? '2 (ELEVATED)' : data.verdict === 'MEDIUM' ? '3 (MODERATE)' : '4 (LOW)'}`;
-    }
-
-    // Verdict Headline
-    if (verdictHeadline) {
-      verdictHeadline.textContent = `${data.verdict}`;
-      if (data.verdict === 'CRITICAL') {
-        verdictHeadline.className = 'verdict-headline text-red';
-      } else if (data.verdict === 'HIGH') {
-        verdictHeadline.className = 'verdict-headline text-orange';
-      } else if (data.verdict === 'MEDIUM') {
-        verdictHeadline.className = 'verdict-headline text-orange';
-      } else {
-        verdictHeadline.className = 'verdict-headline text-green';
-      }
-    }
-
-    // Verdict Explanation
-    if (verdictExplanation) {
-      if (data.evidence && data.evidence.length > 0) {
-        verdictExplanation.textContent = `${data.evidence.length} forensic indicators detected by heuristic engine. ${data.evidence.join(' ')}`;
-      } else {
-        verdictExplanation.textContent = 'No critical threat vectors detected. Domain and message content pass heuristic checks.';
-      }
-    }
-
-    // D. Radar Telemetry
-    if (radarNodeTag1) {
-      radarNodeTag1.textContent = `${data.verdict} [${data.risk_score}%]`;
-    }
-    if (radarHudThreat) {
-      radarHudThreat.textContent = `THREAT: ${data.risk_score}/100`;
-    }
-
-    // E. Risk Breakdown Cards
-    const breakdownCards = document.querySelectorAll('.breakdown-card');
-    if (breakdownCards.length >= 4) {
-      // 1. Sender Risk
-      const hasSenderIssue = data.indicators.some(i => i.toLowerCase().includes('sender'));
-      const senderRiskScore = hasSenderIssue 
-        ? Math.min(data.risk_score, 85) 
-        : (data.domain_analysis?.suspicious ? Math.min(Math.round(data.risk_score * 0.7), 40) : 10);
-      updateBreakdownCard(breakdownCards[0], senderRiskScore, hasSenderIssue ? 'Sender address anomalies or formatting deviations detected.' : (data.domain_analysis?.suspicious ? 'Sender domain flagged with suspicious naming patterns.' : 'Sender address format conforms to standard specification.'));
-
-      // 2. Domain Risk
-      const hasDomainIssue = data.domain_analysis?.suspicious || data.indicators.some(i => i.toLowerCase().includes('domain') || i.toLowerCase().includes('brand'));
-      const domainRiskScore = hasDomainIssue ? Math.min(data.risk_score, 80) : 8;
-      updateBreakdownCard(breakdownCards[1], domainRiskScore, hasDomainIssue ? 'Sender domain exhibits suspicious keywords or brand imitation.' : 'Sender domain shows authentic records and no typosquatting.');
-
-      // 3. URL Risk
-      const hasUrlIssue = data.url_analysis?.suspicious || data.indicators.some(i => i.toLowerCase().includes('http') || i.toLowerCase().includes('url'));
-      const urlRiskScore = hasUrlIssue ? Math.min(data.risk_score, 75) : (data.url_analysis?.url ? 15 : 0);
-      updateBreakdownCard(breakdownCards[2], urlRiskScore, hasUrlIssue ? 'Insecure clear-text HTTP protocol or deceptive destination structure.' : (data.url_analysis?.url ? 'URL uses secure protocol without flagged destination parameters.' : 'No active hyperlink found in message body.'));
-
-      // 4. Language Risk
-      const hasUrgencyIssue = data.indicators.some(i => i.toLowerCase().includes('urgency') || i.toLowerCase().includes('language'));
-      const langRiskScore = hasUrgencyIssue ? Math.min(data.risk_score, 70) : 10;
-      updateBreakdownCard(breakdownCards[3], langRiskScore, hasUrgencyIssue ? 'High frequency of urgency/coercion keywords detected in message body.' : 'Neutral communication tone without detected social engineering triggers.');
-    }
-
-    // F. Threat Indicators Section
-    const indCount = data.indicators ? data.indicators.length : 0;
-    if (threatIndicatorsTitle) {
-      threatIndicatorsTitle.textContent = `THREAT INDICATORS // ${String(indCount).padStart(2, '0')} DETECTED`;
-    }
-    if (threatIndicatorsChip) {
-      threatIndicatorsChip.textContent = `${indCount} ${indCount === 1 ? 'VECTOR' : 'VECTORS'} IDENTIFIED`;
-    }
-
-    if (threatIndicatorsGrid) {
-      threatIndicatorsGrid.innerHTML = '';
-
-      if (indCount === 0) {
-        const cleanCard = document.createElement('div');
-        cleanCard.className = 'indicator-card glass-card';
-        cleanCard.style.gridColumn = '1 / -1';
-        cleanCard.innerHTML = `
-          <div class="indicator-head">
-            <div class="indicator-icon" style="background: rgba(0, 255, 136, 0.15); color: var(--threat-green); border: 1px solid var(--threat-green);">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            </div>
-            <div class="indicator-meta">
-              <span class="severity-tag" style="background: var(--threat-green); color: #000;">VERIFIED CLEAN</span>
-              <h4 class="indicator-title">NO THREAT INDICATORS DETECTED</h4>
-            </div>
+  // Dynamic side-by-side comparison block
+  if (comparisonBlock) {
+    if (hasSimilarity && matchedBrand) {
+      comparisonBlock.innerHTML = `
+        <div class="dynamic-homoglyph-comparison">
+          <div class="homoglyph-card authentic-side">
+            <span class="homoglyph-label font-mono">GENUINE BRAND ENTITY</span>
+            <div class="homoglyph-domain font-mono text-cyan">${escapeHtml(matchedBrand)}</div>
+            <div class="homoglyph-sub font-mono">Authorized Official Domain Pattern</div>
           </div>
-          <div class="indicator-evidence">
-            <span class="evidence-tag">EVIDENCE</span>
-            <code class="evidence-code font-mono text-green">All heuristic verification checks passed.</code>
+          <div class="homoglyph-vs font-mono">VS</div>
+          <div class="homoglyph-card deceptive-side">
+            <span class="homoglyph-label font-mono">SUBMITTED SENDER DOMAIN</span>
+            <div class="homoglyph-domain font-mono text-red">${escapeHtml(senderDomain)}</div>
+            <div class="homoglyph-sub font-mono text-orange">Detection: ${escapeHtml(similarityReason)}</div>
           </div>
-          <p class="indicator-desc">
-            The submitted sender, URL, and body content do not trigger any known phishing or social engineering rulesets.
-          </p>
-        `;
-        threatIndicatorsGrid.appendChild(cleanCard);
-      } else {
-        data.indicators.forEach((indicatorName, idx) => {
-          const evidenceText = data.evidence && data.evidence[idx] ? data.evidence[idx] : 'Signature match in analyzed payload.';
-          
-          let severity = 'MEDIUM';
-          let tagClass = 'medium';
-          let iconClass = 'warning';
-          let iconSvg = `
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-            </svg>
-          `;
-
-          const lowerInd = indicatorName.toLowerCase();
-          if (data.verdict === 'CRITICAL') {
-            if (lowerInd.includes('sender') || lowerInd.includes('impersonation') || lowerInd.includes('domain')) {
-              severity = 'CRITICAL';
-              tagClass = 'critical';
-              iconClass = 'danger';
-              iconSvg = `
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-              `;
-            } else {
-              severity = 'HIGH';
-              tagClass = 'high';
-              iconClass = 'danger';
-            }
-          } else if (data.verdict === 'HIGH') {
-            severity = 'HIGH';
-            tagClass = 'high';
-            iconClass = 'warning';
-            iconSvg = `
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-              </svg>
-            `;
-          } else if (data.verdict === 'MEDIUM') {
-            severity = 'MEDIUM';
-            tagClass = 'medium';
-            iconClass = 'warning';
-          } else {
-            severity = 'LOW';
-            tagClass = 'low';
-            iconClass = 'safe';
-            iconSvg = `
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            `;
-          }
-
-          const card = document.createElement('div');
-          card.className = 'indicator-card glass-card';
-          card.innerHTML = `
-            <div class="indicator-head">
-              <div class="indicator-icon ${iconClass}">
-                ${iconSvg}
-              </div>
-              <div class="indicator-meta">
-                <span class="severity-tag ${tagClass}">${severity}</span>
-                <h4 class="indicator-title">${escapeHtml(indicatorName.toUpperCase())}</h4>
-              </div>
-            </div>
-            <div class="indicator-evidence">
-              <span class="evidence-tag">EVIDENCE</span>
-              <code class="evidence-code font-mono">${escapeHtml(evidenceText)}</code>
-            </div>
-            <p class="indicator-desc">
-              Heuristic detector flagged this anomalous security signal during deep message inspection.
-            </p>
-          `;
-          threatIndicatorsGrid.appendChild(card);
-        });
-      }
-    }
-
-    // F. Domain Intelligence Section
-    const senderDomain = data.domain_analysis?.sender_domain || (inputs.sender.includes('@') ? inputs.sender.split('@')[1] : inputs.sender) || 'N/A';
-    if (domainValDomain) domainValDomain.textContent = senderDomain;
-    if (domainValSimilarity) domainValSimilarity.textContent = data.domain_analysis?.suspicious ? '94%' : '< 5%';
-    if (domainValLookalike) {
-      domainValLookalike.textContent = data.domain_analysis?.suspicious ? 'YES' : 'NO';
-      domainValLookalike.className = `intel-val font-mono ${data.domain_analysis?.suspicious ? 'text-red' : 'text-green'}`;
-    }
-    if (domainValProtocol) {
-      domainValProtocol.textContent = (data.url_analysis?.scheme || 'N/A').toUpperCase();
-    }
-    if (domainValStatus) {
-      domainValStatus.textContent = data.domain_analysis?.suspicious ? 'SUSPICIOUS' : 'VERIFIED';
-      domainValStatus.className = `intel-val font-mono ${data.domain_analysis?.suspicious ? 'text-red' : 'text-green'}`;
-    }
-
-    // Dynamic Domain Visual Comparison
-    const spoofRowDomain = document.querySelector('.spoof-row .compare-domain');
-    if (spoofRowDomain) {
-      if (senderDomain.includes('paypa1')) {
-        spoofRowDomain.innerHTML = `pay<span class="char-match">p</span><span class="char-match">a</span><span class="char-deceptive" title="Digit '1' substitutes letter 'l'">1</span>-login.com`;
-      } else {
-        spoofRowDomain.textContent = senderDomain;
-      }
-    }
-
-    // G. URL Forensics Panel
-    const urlValue = data.url_analysis?.url || inputs.url || 'No URL specified';
-    if (urlDisplayBox) {
-      const copyBtnHtml = `
-        <button class="copy-url-btn" id="copyUrlBtn" title="Copy URL to clipboard">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-          </svg>
-        </button>
+        </div>
       `;
-      urlDisplayBox.innerHTML = `<span class="text-orange font-mono">${escapeHtml(urlValue)}</span>${copyBtnHtml}`;
-      
-      const newCopyBtn = document.getElementById('copyUrlBtn');
-      if (newCopyBtn) {
-        newCopyBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(urlValue)
-            .then(() => showToast('Suspicious URL copied to clipboard'))
-            .catch(() => showToast('Unable to copy URL', 'danger'));
-        });
-      }
-    }
-
-    const scheme = (data.url_analysis?.scheme || 'NONE').toUpperCase();
-    const parsedDomain = data.url_analysis?.domain || (data.url_analysis?.url ? extractDomain(data.url_analysis.url) : 'N/A');
-    const path = data.url_analysis?.url ? extractPath(data.url_analysis.url) : '/';
-    const isUrlSuspicious = data.url_analysis?.suspicious;
-
-    if (urlTableProtocol) {
-      urlTableProtocol.innerHTML = `${scheme} <span class="badge-inline ${scheme === 'HTTP' ? 'warning' : 'safe'}">${scheme === 'HTTP' ? 'INSECURE' : 'SECURE'}</span>`;
-    }
-    if (urlTableDomain) urlTableDomain.textContent = parsedDomain;
-    if (urlTablePath) urlTablePath.textContent = path;
-    if (urlTableStatus) {
-      if (isUrlSuspicious) {
-        const badgeClass = data.verdict === 'CRITICAL' ? 'critical' : (data.verdict === 'HIGH' ? 'high' : 'warning');
-        const badgeText = data.verdict === 'CRITICAL' ? 'HIGH THREAT' : (data.verdict === 'HIGH' ? 'ELEVATED' : 'MODERATE THREAT');
-        urlTableStatus.innerHTML = `SUSPICIOUS <span class="badge-inline ${badgeClass}">${badgeText}</span>`;
-      } else {
-        urlTableStatus.innerHTML = `CLEAN <span class="badge-inline safe">VERIFIED</span>`;
-      }
-    }
-    if (urlTableTls) {
-      urlTableTls.textContent = scheme === 'HTTPS'
-        ? 'TLS ENCRYPTED (HTTPS VALIDATED)'
-        : (scheme === 'HTTP' ? 'NONE (CLEAR TEXT TRANSMISSION)' : 'N/A');
-    }
-
-    // H. Evidence Terminal Logs
-    if (terminalLogBody) {
-      terminalLogBody.innerHTML = `
-        <div class="term-line"><span class="term-prefix">[SOC-INIT]</span> <span class="term-log">INITIALIZING EMAIL FORENSICS ENGINE...</span></div>
-        <div class="term-line"><span class="term-prefix">[API-GATE]</span> <span class="term-log">CONNECTED: <span class="text-cyan">http://127.0.0.1:8001/api/analyze</span></span></div>
-        <div class="term-line"><span class="term-prefix">[SENDER]</span> <span class="term-log">RFC 5322 FROM: <span class="text-white">${escapeHtml(inputs.sender)}</span></span></div>
-        <div class="term-line"><span class="term-prefix">[DOMAIN]</span> <span class="term-log">DOMAIN: ${escapeHtml(senderDomain)} .... <span class="${data.domain_analysis?.suspicious ? 'text-red' : 'text-green'}">${data.domain_analysis?.suspicious ? 'WARNING' : 'VERIFIED'}</span></span></div>
-        <div class="term-line"><span class="term-prefix">[NETWORK]</span> <span class="term-log">URL PROTOCOL: <span class="${data.url_analysis?.scheme === 'http' ? 'text-orange' : 'text-green'}">${(data.url_analysis?.scheme || 'NONE').toUpperCase()}</span></span></div>
-        <div class="term-line"><span class="term-prefix">[NLP-SCAN]</span> <span class="term-log">URGENCY TRIGGER DETECTED: <span class="${data.indicators.some(i => i.toLowerCase().includes('urgency')) ? 'text-red' : 'text-green'}">${data.indicators.some(i => i.toLowerCase().includes('urgency')) ? 'TRUE' : 'FALSE'}</span></span></div>
-        <div class="term-line"><span class="term-prefix">[SIGNALS]</span> <span class="term-log">INDICATORS IDENTIFIED: <span class="text-cyan">${String(indCount).padStart(2, '0')}</span></span></div>
-        <div class="term-line"><span class="term-prefix">[CALC-AG]</span> <span class="term-log">THREAT SCORE: <span class="${data.risk_score >= 60 ? 'text-red' : (data.risk_score >= 30 ? 'text-orange' : 'text-green')} font-bold">${data.risk_score}/100</span></span></div>
-        <div class="term-line"><span class="term-prefix">[VERDICT]</span> <span class="term-log">FINAL VERDICT: <span class="${data.risk_score >= 60 ? 'text-red font-bold bg-danger-glow' : 'text-orange font-bold'}">${data.verdict}</span></span></div>
-        <div class="term-line term-cursor-line">
-          <span class="term-prompt">phishguard@soc-node:~$</span>
-          <span class="terminal-cursor">_</span>
+    } else {
+      comparisonBlock.innerHTML = `
+        <div class="dynamic-homoglyph-comparison clean">
+          <div class="clean-box font-mono">
+            <span class="text-green">✔ No typosquatting or homoglyph impersonation detected for domain: <strong>${escapeHtml(senderDomain)}</strong></span>
+          </div>
         </div>
       `;
     }
+  }
+}
 
-    // I. Indicators of Compromise (IoC)
-    if (iocListContainer) {
-      let detectedKeywords = [];
-      const urgencyEvidence = data.evidence ? data.evidence.find(e => e.includes('keywords detected:')) : null;
-      if (urgencyEvidence) {
-        const parts = urgencyEvidence.split(':');
-        if (parts[1]) {
-          detectedKeywords = parts[1].split(',').map(k => k.trim());
-        }
-      }
+/**
+ * 4. Dedicated URL Forensics Page (#/results/url)
+ */
+function renderUrlView(data) {
+  const explanationEl = document.getElementById('urlExplanationText');
+  const badgeEl = document.getElementById('urlStatusBadge');
+  const displayAddress = document.getElementById('urlDisplayAddress');
+  const protocolEl = document.getElementById('urlDetailProtocol');
+  const hostEl = document.getElementById('urlDetailHost');
+  const tlsEl = document.getElementById('urlDetailTls');
+  const verdictEl = document.getElementById('urlDetailVerdict');
+  const copyBtn = document.getElementById('copyUrlDetailBtn');
 
-      const keywordPillsHtml = detectedKeywords.length > 0 
-        ? detectedKeywords.map(k => `<span class="keyword-pill">${escapeHtml(k)}</span>`).join(' ')
-        : `<span class="text-muted font-mono" style="font-size: 11px;">None detected</span>`;
+  const rawUrl = data.rawInputs?.url || '';
+  const urlAnalysis = data.url_analysis || {};
 
-      iocListContainer.innerHTML = `
-        <div class="ioc-item">
-          <div class="ioc-type font-mono">EMAIL</div>
-          <div class="ioc-value font-mono">${escapeHtml(inputs.sender || 'N/A')}</div>
-          <span class="ioc-tag ${data.domain_analysis?.suspicious ? 'danger' : 'warning'}">${data.domain_analysis?.suspicious ? 'SUSPECT' : 'CLEAN'}</span>
+  if (displayAddress) {
+    displayAddress.textContent = rawUrl || 'No URL submitted in this case';
+  }
+
+  if (copyBtn) {
+    copyBtn.onclick = () => {
+      if (rawUrl) copyToClipboard(rawUrl, 'URL copied to clipboard!');
+      else showToast('No URL available to copy.', 'warning');
+    };
+  }
+
+  if (!rawUrl) {
+    if (badgeEl) {
+      badgeEl.textContent = 'NOT PROVIDED';
+      badgeEl.className = 'badge-status badge-neutral';
+    }
+    if (protocolEl) protocolEl.textContent = 'N/A';
+    if (hostEl) hostEl.textContent = 'N/A';
+    if (tlsEl) tlsEl.textContent = 'N/A';
+    if (verdictEl) verdictEl.textContent = 'NO LINK TARGET ANALYZED';
+    if (explanationEl) {
+      explanationEl.textContent = 'No hyperlink was submitted for this case. URL security heuristics were bypassed.';
+    }
+    return;
+  }
+
+  const isHttps = rawUrl.toLowerCase().startsWith('https://') || Boolean(urlAnalysis.is_https);
+  const host = urlAnalysis.extracted_domain || extractDomain(rawUrl);
+  const isSuspicious = !isHttps || Boolean(urlAnalysis.has_ip) || Boolean(urlAnalysis.has_suspicious_keywords);
+
+  if (protocolEl) protocolEl.textContent = isHttps ? 'HTTPS' : 'HTTP (Insecure)';
+  if (hostEl) hostEl.textContent = host || 'Unknown Host';
+  if (tlsEl) {
+    tlsEl.textContent = isHttps ? 'TLS / SSL Encrypted' : 'Cleartext (Unencrypted)';
+    tlsEl.className = isHttps ? 'prop-val font-mono text-green' : 'prop-val font-mono text-red';
+  }
+
+  if (verdictEl) {
+    verdictEl.textContent = isSuspicious ? 'POTENTIALLY SUSPICIOUS / INSECURE' : 'STANDARD HYPERLINK SYNTAX';
+    verdictEl.className = isSuspicious ? 'prop-val font-mono text-orange' : 'prop-val font-mono text-green';
+  }
+
+  if (badgeEl) {
+    badgeEl.textContent = isSuspicious ? 'SUSPICIOUS' : 'STANDARD';
+    badgeEl.className = isSuspicious ? 'badge-status badge-danger' : 'badge-status badge-safe';
+  }
+
+  if (explanationEl) {
+    if (!isHttps) {
+      explanationEl.textContent = `The destination '${rawUrl}' uses cleartext HTTP instead of secure HTTPS, exposing traffic to interception. This is a common characteristic of cheap or quick credential-harvesting phishing kits.`;
+    } else {
+      explanationEl.textContent = `The link points to '${host}'. While it uses encrypted HTTPS transport, always verify the domain identity independently before supplying credentials.`;
+    }
+  }
+}
+
+/**
+ * 5. Dedicated Forensic Evidence Page (#/results/evidence)
+ */
+function renderEvidenceView(data) {
+  const container = document.getElementById('evidenceListContainer');
+  if (!container) return;
+
+  const evidence = data.evidence || [];
+
+  if (evidence.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state-card glass-card">
+        <span class="empty-icon text-cyan">ℹ</span>
+        <h4>No Direct Forensic Artifacts Flagged</h4>
+        <p>The heuristic analyzer did not isolate explicit suspicious snippets or keywords from this message.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = evidence.map((item, idx) => {
+    const itemNum = String(idx + 1).padStart(2, '0');
+    return `
+      <div class="evidence-artifact-card glass-card">
+        <div class="artifact-top-row">
+          <div class="artifact-badge font-mono">ARTIFACT #${itemNum}</div>
+          <button class="btn-copy-sm" onclick="copyToClipboard('${escapeHtml(item).replace(/'/g, "\\'")}', 'Artifact #${itemNum} copied!')">
+            Copy Snippet
+          </button>
         </div>
-
-        <div class="ioc-item">
-          <div class="ioc-type font-mono">DOMAIN</div>
-          <div class="ioc-value font-mono">${escapeHtml(senderDomain)}</div>
-          <span class="ioc-tag ${data.domain_analysis?.suspicious ? 'danger' : 'warning'}">${data.domain_analysis?.suspicious ? 'LOOKALIKE' : 'NORMAL'}</span>
+        <div class="artifact-body font-mono">
+          <code>${escapeHtml(item)}</code>
         </div>
+      </div>
+    `;
+  }).join('');
+}
 
-        <div class="ioc-item">
-          <div class="ioc-type font-mono">URL</div>
-          <div class="ioc-value font-mono">${escapeHtml(urlValue)}</div>
-          <span class="ioc-tag ${data.url_analysis?.suspicious ? 'danger' : 'warning'}">${data.url_analysis?.suspicious ? 'HARVESTER' : 'BENIGN'}</span>
+/**
+ * 6. Dedicated Threat Indicators Page (#/results/indicators)
+ */
+function renderIndicatorsView(data) {
+  const grid = document.getElementById('indicatorsDetailGrid');
+  if (!grid) return;
+
+  const indicators = data.indicators || [];
+
+  if (indicators.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state-card glass-card" style="grid-column: 1 / -1;">
+        <span class="empty-icon text-green">✔</span>
+        <h4>No Threat Indicators Triggered</h4>
+        <p>Zero defined phishing attack signatures or heuristic rules were matched.</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = indicators.map((ind, idx) => {
+    let name = '';
+    let desc = '';
+    let severity = 'MEDIUM';
+
+    if (typeof ind === 'string') {
+      name = ind;
+      desc = `Triggered security rule signature #${idx + 1}`;
+    } else {
+      name = ind.name || ind.id || `Rule #${idx + 1}`;
+      desc = ind.description || ind.reason || '';
+      if (ind.severity) severity = ind.severity.toUpperCase();
+    }
+
+    let pillClass = 'pill-warning';
+    if (severity === 'HIGH' || severity === 'CRITICAL') pillClass = 'pill-danger';
+    if (severity === 'LOW') pillClass = 'pill-safe';
+
+    return `
+      <div class="indicator-detail-card glass-card">
+        <div class="indicator-card-head">
+          <span class="indicator-sev-pill ${pillClass} font-mono">${escapeHtml(severity)}</span>
+          <span class="indicator-index font-mono">#${String(idx + 1).padStart(2, '0')}</span>
         </div>
+        <h4 class="indicator-title">${escapeHtml(name)}</h4>
+        <p class="indicator-desc">${escapeHtml(desc || 'Heuristic threat signature detected by defensive analyzer.')}</p>
+      </div>
+    `;
+  }).join('');
+}
 
-        <div class="ioc-item">
-          <div class="ioc-type font-mono">KEYWORDS</div>
-          <div class="ioc-tags-group">
-            ${keywordPillsHtml}
-          </div>
-          <span class="ioc-tag ${detectedKeywords.length > 0 ? 'warning' : 'safe'}">TRIGGERS</span>
+/**
+ * 7. Dedicated Recommended Action Page (#/results/recommended-action)
+ */
+function renderActionView(data) {
+  const titleEl = document.getElementById('actionDirectiveTitle');
+  const textEl = document.getElementById('actionDirectiveText');
+
+  const verdict = data.verdict || 'UNKNOWN';
+  const actionText = data.recommended_action || 'Follow company cybersecurity policy and verify sender through known legitimate channels.';
+
+  if (titleEl) {
+    titleEl.textContent = `${verdict} Risk Mitigation Directive`;
+  }
+  if (textEl) {
+    textEl.textContent = actionText;
+  }
+}
+
+/**
+ * 8. Dedicated Investigation Report Page (#/report)
+ */
+function renderReportView(data) {
+  const caseIdEl = document.getElementById('reportCaseId');
+  const timeEl = document.getElementById('reportTimestamp');
+  const scoreEl = document.getElementById('reportScoreVal');
+  const verdictEl = document.getElementById('reportVerdictVal');
+  const brandEl = document.getElementById('reportBrandVal');
+  const domainEl = document.getElementById('reportDomainVal');
+
+  const tableSender = document.getElementById('reportTableSender');
+  const tableSubject = document.getElementById('reportTableSubject');
+  const tableUrl = document.getElementById('reportTableUrl');
+  const tableBody = document.getElementById('reportTableBody');
+
+  const findingsList = document.getElementById('reportFindingsList');
+  const actionText = document.getElementById('reportActionText');
+
+  const raw = data.rawInputs || {};
+  const senderDomain = data.domain_analysis?.sender_domain || (raw.sender ? raw.sender.split('@')[1] : 'N/A');
+
+  if (caseIdEl) caseIdEl.textContent = data.caseId || 'PG-UNKNOWN';
+  if (timeEl) timeEl.textContent = data.timestamp || new Date().toLocaleString();
+  if (scoreEl) scoreEl.textContent = `${data.risk_score || 0} / 100`;
+  if (verdictEl) {
+    verdictEl.textContent = data.verdict || 'UNKNOWN';
+    verdictEl.className = data.risk_score >= 70 ? 'summary-value text-red' : (data.risk_score >= 40 ? 'summary-value text-orange' : 'summary-value text-green');
+  }
+  if (brandEl) brandEl.textContent = data.matched_brand || 'None (No brand targeted)';
+  if (domainEl) domainEl.textContent = senderDomain;
+
+  if (tableSender) tableSender.textContent = raw.sender || 'Not provided';
+  if (tableSubject) tableSubject.textContent = raw.subject || 'Not provided';
+  if (tableUrl) tableUrl.textContent = raw.url || 'Not provided';
+  if (tableBody) {
+    const b = raw.body || 'Not provided';
+    tableBody.textContent = b.length > 300 ? b.substring(0, 300) + '... [TRUNCATED]' : b;
+  }
+
+  if (actionText) actionText.textContent = data.recommended_action || 'No action specified.';
+
+  if (findingsList) {
+    const items = [];
+    if (data.domain_similarity && data.matched_brand) {
+      items.push(`[CRITICAL BRAND SPOOFING] Targeted brand: ${data.matched_brand}. Similarity reason: ${data.similarity_reason}`);
+    }
+    (data.indicators || []).forEach(ind => {
+      const name = typeof ind === 'string' ? ind : (ind.name || ind.id || '');
+      const reason = typeof ind === 'string' ? '' : (ind.description || ind.reason || '');
+      items.push(`[INDICATOR] ${name}${reason ? ' — ' + reason : ''}`);
+    });
+    (data.evidence || []).forEach(ev => {
+      items.push(`[EVIDENCE] ${ev}`);
+    });
+
+    if (items.length === 0) {
+      findingsList.innerHTML = '<div class="report-finding-item font-mono text-green">✔ No malicious findings or IoCs detected.</div>';
+    } else {
+      findingsList.innerHTML = items.map(it => `
+        <div class="report-finding-item font-mono">
+          <span class="finding-bullet">•</span>
+          <span>${escapeHtml(it)}</span>
         </div>
-      `;
-    }
-
-    // J. Recommended Security Action Card
-    if (actionCardTitle) {
-      actionCardTitle.textContent = data.verdict === 'CRITICAL'
-        ? 'High Confidence Malicious Threat Detected'
-        : (data.verdict === 'HIGH' ? 'High Risk Threat Detected' : (data.verdict === 'MEDIUM' ? 'Moderate Risk Caution Required' : 'Standard Routine Security Verification'));
-    }
-
-    if (actionCardMessage) {
-      actionCardMessage.textContent = data.recommended_action;
-    }
-
-    // K. Incident Report Dossier Section
-    if (dossierCaseId) dossierCaseId.textContent = currentCaseId;
-    if (reportBadgeId) reportBadgeId.textContent = `CASE: ${currentCaseId}`;
-    if (dossierHeaderBadge) {
-      dossierHeaderBadge.textContent = `${data.verdict} SEVERITY`;
-      if (data.verdict === 'CRITICAL') {
-        dossierHeaderBadge.style.background = 'var(--threat-red)';
-        dossierHeaderBadge.style.color = '#ffffff';
-      } else if (data.verdict === 'HIGH') {
-        dossierHeaderBadge.style.background = 'var(--threat-orange)';
-        dossierHeaderBadge.style.color = '#ffffff';
-      } else if (data.verdict === 'MEDIUM') {
-        dossierHeaderBadge.style.background = 'var(--threat-yellow)';
-        dossierHeaderBadge.style.color = '#000000';
-      } else {
-        dossierHeaderBadge.style.background = 'var(--threat-green)';
-        dossierHeaderBadge.style.color = '#000000';
-      }
-    }
-    if (dossierTimestamp) {
-      dossierTimestamp.textContent = `TIMESTAMP: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC`;
-    }
-
-    if (dossierVerdictVal) {
-      dossierVerdictVal.textContent = data.verdict;
-      dossierVerdictVal.className = `cell-value ${data.risk_score >= 60 ? 'text-red' : (data.risk_score >= 30 ? 'text-orange' : 'text-green')} font-bold font-mono`;
-    }
-
-    if (dossierScoreVal) {
-      dossierScoreVal.textContent = `${data.risk_score} / 100`;
-      dossierScoreVal.className = `cell-value ${data.risk_score >= 60 ? 'text-red' : (data.risk_score >= 30 ? 'text-orange' : 'text-green')} font-bold font-mono`;
-    }
-
-    if (dossierSeverityVal) {
-      dossierSeverityVal.textContent = data.verdict;
-      dossierSeverityVal.className = `cell-value ${data.risk_score >= 60 ? 'text-red' : (data.risk_score >= 30 ? 'text-orange' : 'text-green')} font-mono`;
-    }
-
-    if (dossierIndicatorsVal) {
-      dossierIndicatorsVal.textContent = String(indCount).padStart(2, '0');
-    }
-
-    if (dossierEvidenceVal) {
-      dossierEvidenceVal.textContent = data.indicators && data.indicators.length > 0 
-        ? data.indicators.join(' + ') 
-        : 'Baseline Cleared // No hostile vectors';
-    }
-
-    if (dossierActionVal) {
-      dossierActionVal.textContent = data.recommended_action;
+      `).join('');
     }
   }
+}
 
-  // Helper to update breakdown cards
-  function updateBreakdownCard(card, score, description) {
-    if (!card) return;
-    const scoreEl = card.querySelector('.breakdown-score');
-    const fillEl = card.querySelector('.progress-bar-fill');
-    const descEl = card.querySelector('.breakdown-desc');
+// ============================================================================
+// DEMO / TEST PAYLOAD LOADER
+// ============================================================================
+function loadSamplePhishingCase() {
+  const senderInput = document.getElementById('senderInput');
+  const subjectInput = document.getElementById('subjectInput');
+  const urlInput = document.getElementById('urlInput');
+  const bodyInput = document.getElementById('emailBodyInput');
 
-    if (scoreEl) {
-      scoreEl.textContent = `${score}%`;
-      scoreEl.className = `breakdown-score font-mono ${score >= 70 ? 'text-red' : (score >= 40 ? 'text-orange' : 'text-green')}`;
-    }
+  if (senderInput) senderInput.value = 'security@paypa1-login.com';
+  if (subjectInput) subjectInput.value = 'Your account will be suspended!';
+  if (urlInput) urlInput.value = 'http://paypa1-login.com/verify';
+  if (bodyInput) bodyInput.value = 'Verify your account immediately.';
 
-    if (fillEl) {
-      fillEl.style.width = `${score}%`;
-      fillEl.className = `progress-bar-fill ${score >= 70 ? 'red' : (score >= 40 ? 'orange' : 'green')}`;
-    }
+  navigateTo('#/investigate');
+  showToast('PayPal Spoof test payload loaded into investigation form.', 'info');
+}
 
-    if (descEl) {
-      descEl.textContent = description;
-    }
+// ============================================================================
+// INITIALIZATION & EVENT BINDINGS
+// ============================================================================
+function initApp() {
+  // 1. Setup Hash Routing Listener
+  window.addEventListener('hashchange', handleRouteChange);
+
+  // 2. Initial Route Execution
+  handleRouteChange();
+
+  // 3. Form Submission
+  const form = document.getElementById('investigateForm');
+  if (form) {
+    form.addEventListener('submit', handleInvestigationSubmit);
   }
 
-  // Utility helpers
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+  // 4. Sample Load Buttons
+  const loadSampleBtn = document.getElementById('loadSampleBtn');
+  if (loadSampleBtn) loadSampleBtn.addEventListener('click', loadSamplePhishingCase);
+
+  const dashSampleBtn = document.getElementById('dashSampleBtn');
+  if (dashSampleBtn) dashSampleBtn.addEventListener('click', loadSamplePhishingCase);
+
+  // 5. Brand Link Navigation
+  const navBrand = document.getElementById('navBrandLink');
+  if (navBrand) {
+    navBrand.style.cursor = 'pointer';
+    navBrand.addEventListener('click', () => navigateTo('#/dashboard'));
   }
 
-  function extractDomain(urlStr) {
-    try {
-      const parsed = new URL(urlStr);
-      return parsed.hostname;
-    } catch {
-      return urlStr.replace(/^https?:\/\//, '').split('/')[0];
-    }
-  }
-
-  function extractPath(urlStr) {
-    try {
-      const parsed = new URL(urlStr);
-      return parsed.pathname || '/';
-    } catch {
-      return '/';
-    }
-  }
-
-  // Hook Scan Button Click
-  if (initiateScanBtn) {
-    initiateScanBtn.addEventListener('click', runThreatAnalysis);
-  }
-
-  // --- 7. RELOAD SAMPLE DATA ---
-  if (resetSampleBtn) {
-    resetSampleBtn.addEventListener('click', () => {
-      if (senderInput) senderInput.value = DEFAULT_SAMPLE.sender;
-      if (subjectInput) subjectInput.value = DEFAULT_SAMPLE.subject;
-      if (urlInput) urlInput.value = DEFAULT_SAMPLE.url;
-      if (emailBodyInput) emailBodyInput.value = DEFAULT_SAMPLE.body;
-      
-      showToast('Sample dataset restored: PayPal credential harvest probe');
-    });
-  }
-
-  // --- 8. DRAG AND DROP ATTACHMENT HANDLER ---
-  if (dropZone && fileAttachment) {
-    if (browseFileBtn) {
-      browseFileBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        fileAttachment.click();
-      });
-    }
-
-    dropZone.addEventListener('click', () => {
-      fileAttachment.click();
-    });
-
-    fileAttachment.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files[0]) {
-        handleFileSelection(e.target.files[0].name);
-      }
-    });
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.classList.add('dragover');
-      });
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.classList.remove('dragover');
-      });
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        handleFileSelection(e.dataTransfer.files[0].name);
-      }
-    });
-  }
-
-  function handleFileSelection(name) {
-    if (fileNameDisplay) fileNameDisplay.textContent = name;
-    if (fileSelectedDisplay) fileSelectedDisplay.classList.remove('hidden');
-    showToast(`Attachment staged for inspection: ${name}`);
-  }
-
-  if (removeFileBtn) {
-    removeFileBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (fileAttachment) fileAttachment.value = '';
-      if (fileSelectedDisplay) fileSelectedDisplay.classList.add('hidden');
-      showToast('Attachment removed from analysis buffer');
-    });
-  }
-
-  // --- 9. COPY FORENSIC ASSETS (URL, IoC, TERMINAL) ---
-  if (copyLogBtn) {
-    copyLogBtn.addEventListener('click', () => {
-      if (terminalLogBody) {
-        navigator.clipboard.writeText(terminalLogBody.innerText)
-          .then(() => showToast('SOC evidence logs copied to clipboard'))
-          .catch(() => showToast('Failed to copy logs', 'danger'));
-      }
-    });
-  }
-
-  if (copyUrlBtn && urlInput) {
-    copyUrlBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(urlInput.value || 'http://paypa1-login.com/verify')
-        .then(() => showToast('Suspicious URL copied to clipboard'))
-        .catch(() => showToast('Unable to copy URL', 'danger'));
-    });
-  }
-
-  if (copyIocBtn) {
-    copyIocBtn.addEventListener('click', () => {
-      const senderVal = (senderInput ? senderInput.value : '').trim() || 'security@paypa1-login.com';
-      const urlVal = (urlInput ? urlInput.value : '').trim() || 'http://paypa1-login.com/verify';
-      const domainVal = senderVal.includes('@') ? senderVal.split('@')[1] : senderVal;
-      const score = latestAnalysisResult ? latestAnalysisResult.risk_score : 45;
-      const verdict = latestAnalysisResult ? latestAnalysisResult.verdict : 'MEDIUM';
-
-      const iocPayload = [
-        '# PHISHGUARD // INDICATORS OF COMPROMISE (IoC)',
-        `CASE_ID: ${currentCaseId}`,
-        `SENDER_EMAIL: ${senderVal}`,
-        `DOMAIN: ${domainVal}`,
-        `URL: ${urlVal}`,
-        `THREAT_SCORE: ${score}/100`,
-        `VERDICT: ${verdict}`,
-        `TIMESTAMP: ${new Date().toISOString()}`,
-        `SYSTEM: FASTAPI_HEURISTICS_PS02`
-      ].join('\n');
-
-      navigator.clipboard.writeText(iocPayload)
-        .then(() => showToast('All IoCs copied formatted as STIX/TAXII manifest'))
-        .catch(() => showToast('Clipboard copy failed', 'danger'));
-    });
-  }
-
-  // --- 10. SECURITY ACTION HANDLERS ---
-  if (quarantineBtn) {
-    quarantineBtn.addEventListener('click', () => {
-      showToast('Message quarantined in SOC sandbox vault. Gateway rule active.', 'danger');
-      quarantineBtn.innerHTML = '<span>🔒</span><span>EMAIL QUARANTINED</span>';
-      quarantineBtn.classList.remove('danger-btn');
-      quarantineBtn.classList.add('secondary-btn');
-    });
-  }
-
-  if (reportIncidentBtn) {
-    reportIncidentBtn.addEventListener('click', () => {
-      showToast(`Incident ticket #${currentCaseId} dispatched to SOC L2 responder queue`);
-      reportIncidentBtn.innerHTML = '<span>🛡️</span><span>INCIDENT DISPATCHED</span>';
-    });
-  }
-
-  // --- 11. INCIDENT REPORT ACTIONS & DYNAMIC DOWNLOAD ---
-  if (generateReportBtn) {
-    generateReportBtn.addEventListener('click', () => {
-      showToast(`Compiling high-assurance SOC Dossier for ${currentCaseId}...`);
-      setTimeout(() => {
-        showToast('PDF Dossier compiled and cryptographic hash verified.');
-      }, 1000);
-    });
-  }
-
-  if (downloadReportBtn) {
-    downloadReportBtn.addEventListener('click', () => {
-      const senderVal = (senderInput ? senderInput.value : '').trim() || DEFAULT_SAMPLE.sender;
-      const subjectVal = (subjectInput ? subjectInput.value : '').trim() || DEFAULT_SAMPLE.subject;
-      const urlVal = (urlInput ? urlInput.value : '').trim() || DEFAULT_SAMPLE.url;
-
-      const reportData = {
-        platform: "PhishGuard",
-        project: "Phishing Attack Investigation Platform – PS-02",
-        incidentId: currentCaseId,
-        timestamp: new Date().toISOString(),
-        analyzed_input: {
-          sender: senderVal,
-          subject: subjectVal,
-          url: urlVal
-        },
-        backend_response: latestAnalysisResult || {
-          risk_score: 45,
-          verdict: "MEDIUM",
-          indicators: ["Suspicious domain pattern", "Urgency language", "Insecure HTTP link"],
-          recommended_action: "Treat the message with caution and verify the sender through a trusted channel."
-        }
-      };
-
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportData, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `PhishGuard_${currentCaseId}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-
-      showToast(`Incident Report ${currentCaseId}.json exported`);
-    });
-  }
-
-  if (shareIncidentBtn) {
-    shareIncidentBtn.addEventListener('click', () => {
-      const shareUrl = window.location.href.split('#')[0] + '#incident-reports';
-      navigator.clipboard.writeText(shareUrl)
-        .then(() => showToast('Secure incident reference link copied to clipboard'))
-        .catch(() => showToast('Incident link ready for sharing'));
-    });
-  }
-
-  // --- 12. HERO CTA SMOOTH SCROLLING ---
-  if (heroAnalyzeBtn) {
-    heroAnalyzeBtn.addEventListener('click', (e) => {
+  // 6. Login Form (Demo Gate)
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    loginForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const target = document.getElementById('analysis-workspace');
-      if (target) target.scrollIntoView({ behavior: 'smooth' });
+      sessionStorage.setItem(AUTH_KEY, 'analyst_active');
+      showToast('Logged in as SOC Analyst (Demo Mode)', 'success');
+      navigateTo('#/dashboard');
     });
   }
 
-  if (heroIncidentsBtn) {
-    heroIncidentsBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const target = document.getElementById('incident-reports');
-      if (target) target.scrollIntoView({ behavior: 'smooth' });
+  // 7. Logout Button
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      sessionStorage.removeItem(AUTH_KEY);
+      showToast('Analyst session ended.', 'info');
+      navigateTo('#/login');
     });
   }
 
-  // --- 13. SOC SETTINGS MODAL INTERACTIONS ---
-  if (settingsBtn && settingsModal) {
-    settingsBtn.addEventListener('click', () => {
-      settingsModal.classList.remove('hidden');
-    });
+  // 8. Print Report Button
+  const printBtn = document.getElementById('printReportBtn');
+  if (printBtn) {
+    printBtn.addEventListener('click', () => window.print());
   }
 
-  if (closeSettingsModal && settingsModal) {
-    closeSettingsModal.addEventListener('click', () => {
-      settingsModal.classList.add('hidden');
-    });
-  }
+  // 9. Periodic Backend Health Verification
+  checkBackendHealth();
+  setInterval(checkBackendHealth, 15000);
+}
 
-  if (saveSettingsBtn && settingsModal) {
-    saveSettingsBtn.addEventListener('click', () => {
-      if (scanlineToggle && cyberScanline) {
-        cyberScanline.style.display = scanlineToggle.checked ? 'block' : 'none';
-      }
-
-      if (radarAnimationToggle && radarSweepBeam) {
-        radarSweepBeam.style.animationPlayState = radarAnimationToggle.checked ? 'running' : 'paused';
-      }
-
-      settingsModal.classList.add('hidden');
-      showToast('SOC interface parameters applied');
-    });
-  }
-
-  window.addEventListener('click', (e) => {
-    if (e.target === settingsModal) {
-      settingsModal.classList.add('hidden');
-    }
-  });
-
-  // --- 14. ACTIVE NAV LINK HIGHLIGHTING ---
-  const sections = document.querySelectorAll('section[id], main[id]');
-  const navLinks = document.querySelectorAll('.nav-link');
-
-  window.addEventListener('scroll', () => {
-    let currentId = '';
-    const scrollPos = window.pageYOffset + 140;
-
-    sections.forEach(section => {
-      const top = section.offsetTop;
-      const height = section.offsetHeight;
-      if (scrollPos >= top && scrollPos < top + height) {
-        currentId = section.getAttribute('id');
-      }
-    });
-
-    navLinks.forEach(link => {
-      link.classList.remove('active');
-      if (link.getAttribute('href') === `#${currentId}`) {
-        link.classList.add('active');
-      }
-    });
-  });
-
-  // --- INITIALIZATION ---
-  initStatCounters();
-  
-  // Log readiness
-  console.log('%c[PhishGuard SOC Command Center] // Connected to FastAPI: http://127.0.0.1:8001/api/analyze', 'color: #00f0ff; font-weight: bold;');
-});
+// Boot on DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
