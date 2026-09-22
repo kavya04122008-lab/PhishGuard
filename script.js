@@ -7,7 +7,7 @@
  * 2. ZERO fake component risk percentages (sender %, domain %, etc.).
  * 3. Domain Analysis is FULLY dynamic (no hardcoded PayPal or domains).
  * 4. Dedicated SPA hash routing with distinct sub-pages and back navigation (no accordions).
- * 5. Real API integration: POST http://127.0.0.1:8000/api/analyze
+ * 5. Real API integration: POST https://phishguard-1-m1se.onrender.com/api/analyze
  */
 
 'use strict';
@@ -15,7 +15,8 @@
 // ============================================================================
 // CONSTANTS & CONFIGURATION
 // ============================================================================
-const API_BASE = 'http://127.0.0.1:8000';
+//const API_BASE = 'https://phishguard-1-m1se.onrender.com';
+const API_BASE = 'https://phishguard-1-m1se.onrender.com';
 const STORAGE_KEY = 'phishguard_analysis_v2';
 const AUTH_KEY = 'phishguard_analyst_session';
 
@@ -220,7 +221,7 @@ async function checkBackendHealth() {
         statusText.classList.add('text-green');
       }
       if (dashStatus) {
-        dashStatus.textContent = 'http://127.0.0.1:8000 (Active)';
+        dashStatus.textContent = 'https://phishguard-1-m1se.onrender.com (Active)';
         dashStatus.className = 'metric-val text-green font-mono';
       }
       return true;
@@ -236,7 +237,7 @@ async function checkBackendHealth() {
     statusText.classList.add('text-red');
   }
   if (dashStatus) {
-    dashStatus.textContent = 'http://127.0.0.1:8000 (Offline — Start FastAPI)';
+    dashStatus.textContent = 'https://phishguard-1-m1se.onrender.com (Offline — Start FastAPI)';
     dashStatus.className = 'metric-val text-red font-mono';
   }
   return false;
@@ -326,7 +327,7 @@ async function handleInvestigationSubmit(e) {
     if (submitBtn) submitBtn.disabled = false;
 
     if (errorAlert && errorMessage) {
-      errorMessage.textContent = `Backend Analysis Error: ${err.message}. Verify that FastAPI is running on http://127.0.0.1:8000.`;
+      errorMessage.textContent = `Backend Analysis Error: ${err.message}. Verify that the PhishGuard API is reachable at https://phishguard-1-m1se.onrender.com;
       errorAlert.classList.remove('hidden');
     }
     showToast(`Analysis failed: ${err.message}`, 'error');
@@ -393,8 +394,7 @@ function renderResultsOverview(data) {
 
   // 1. Score display
   if (scoreEl) scoreEl.textContent = score;
-  //console.log("RESULT PAGE SCORE:", score);
-  //console.log("RESULT ELEMENT:", scoreEl?.textContent);
+  
   if (caseIdEl) caseIdEl.textContent = `CASE: ${data.caseId || '--'}`;
 
   // 2. Circular meter animation
